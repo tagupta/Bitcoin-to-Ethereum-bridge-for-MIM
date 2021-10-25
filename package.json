@@ -1,0 +1,19 @@
+{
+  "name": "ren-project",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2",
+    "@renproject/chains": "^2.5.7",
+    "@renproject/ren": "^2.5.7",
+    "@truffle/hdwallet-provider": "^1.5.0",
+    "node-gyp-build": "^4.3.0"
+  }
+}

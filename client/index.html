@@ -1,0 +1,42 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="assets/js/jquery-3.4.1.js"></script>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <script src="assets/bootstrap/js/popper.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    
+    <script src="assets/js/web3.min.js"></script>
+    <script src="./abi.js"></script>
+    <link rel="stylesheet" href="assets/css/index.css">
+</head>
+<body>
+    <div class="container">
+      <div class="row justify-content-around">
+         <div class="col-lg-6 btcBox">
+            <div class="form-group">
+                <p>Balance: <span id="btnBalance">20</span> BTC</p>
+            </div>
+            <div class="d-flex justify-content-around btnBox">
+                <button class="btn myBtnStyle" onclick="deposit()">Deposit 0.002 BTC</button>
+                <button class="btn myBtnStyle" onclick="withdraw()">Withdraw</button>  
+            </div>
+         </div>
+      </div>
+    </div>
+    <script type="text/javascript">
+            $(document).ready(function () {
+              setTimeout(() => {
+                updateBalance();
+              }, 1000);
+            //   setInterval(() => {
+            //     updateBalance();
+            //   }, 10*1000)
+            });
+    </script>
+</body>
+<script src="./main.js"></script>
+</html>

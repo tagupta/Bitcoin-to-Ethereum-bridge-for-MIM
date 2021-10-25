@@ -1,0 +1,27 @@
+body{
+    background-color: black;
+}
+.row{
+    margin: 8.5rem;
+}
+.btcBox{
+    border-radius: 20px;
+    box-shadow: -1px -1px 20px 0px #04c1f0;
+    font-family: monospace;
+    color: white;
+}
+.myBtnStyle{
+    background-color: #3ef0b5;
+    border-color: #3ef0b5;
+    color: black;
+  }
+  .myBtnStyle:hover{
+    background-color: #84FFFF;
+  }
+  p{
+    text-align: center;
+    margin: 1.5rem;
+  }
+  .btnBox{
+    margin-bottom: 30px;
+  }
