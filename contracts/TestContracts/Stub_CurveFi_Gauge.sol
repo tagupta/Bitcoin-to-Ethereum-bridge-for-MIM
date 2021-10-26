@@ -7,7 +7,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import "../curvefi/ICurveFi_Minter.sol";
 import "../curvefi/ICurveFi_Gauge.sol";
 
-contract Stub_CurveFi_Gauge{
+contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
    //CRV distribution number
     uint128 period;
     //Simplification to keep timestamp
@@ -43,10 +43,10 @@ contract Stub_CurveFi_Gauge{
         period_timestamp = block.timestamp;
     }
 
-    function user_checkpoint(address addr)public returns(bool){
+    function user_checkpoint(address addr)public override returns(bool){
         require(msg.sender == addr || msg.sender == __minter, "Unauthorized minter");
         _checkpoint(addr);
-        _update_liquidity_limit(addr, balanceOf[addr]); // totalsupply - 3rd parameter
+        _update_liquidity_limit(addr, balanceOf[addr],totalSupply); // totalsupply - 3rd parameter
         return true;
     }
 
@@ -70,11 +70,57 @@ contract Stub_CurveFi_Gauge{
         integrate_checkpoint_of[addr] = block.timestamp;
     }
 
-    function _update_liquidity_limit(address addr, uint l)public{
+    function _update_liquidity_limit(address addr, uint l, uint L)public{
         uint lim = l * TOKENLESS_PRODUCTION / 100;
         uint old_bal = working_balances[addr];
         working_balances[addr] = lim;
         working_supply = working_supply + lim - old_bal;
+        L+=1; //using L just to ignore warning
+    }
+
+    function deposit(uint _value) public override{
+      _checkpoint(_msgSender());
+
+      if (_value != 0){
+        balanceOf[_msgSender()] +=  _value;
+        totalSupply +=  _value;
+
+        _update_liquidity_limit(_msgSender(),  balanceOf[_msgSender()], totalSupply);
+
+        IERC20(__lp_token).transferFrom(_msgSender(), address(this), _value);
+      }
+        
+    }
+
+    function withdraw(uint _value)public override{
+        _checkpoint(_msgSender());
+        balanceOf[_msgSender()] -= _value;
+        totalSupply -= _value;
+
+        _update_liquidity_limit(_msgSender(), balanceOf[_msgSender()], totalSupply);
+        
+        IERC20(__lp_token).transfer(_msgSender(), _value);
+    }
+
+    function claimable_tokens(address addr)public override returns(uint){
+        _checkpoint(addr);
+        return __integrate_fraction[addr] - ICurveFi_Minter(__minter).minted(addr, address(this));
+    }
+
+    function minter() public view override returns(address) {
+        return __minter;
+    }
+
+    function crv_token() public view override returns(address) {
+        return __crv_token;
+    }
+
+    function lp_token() public view override returns(address) {
+        return __lp_token;
+    }
+
+    function integrate_fraction(address _for) public view override returns(uint256) {
+        return __integrate_fraction[_for];
     }
 
 }

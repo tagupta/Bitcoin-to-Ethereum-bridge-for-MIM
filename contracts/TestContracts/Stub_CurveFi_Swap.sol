@@ -9,9 +9,9 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import '../curvefi/ICurveFi_StableSwapRen.sol';
 import '../curvefi/IRenERC20.sol';
-import './ERC20LPToken.sol';
+import './LPToken.sol';
 
-contract Stub_CurveFi_Swap is Initializable,Context{
+contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
     
     uint256 public constant N_COINS = 2;
     uint256 constant MAX_EXCHANGE_FEE = 0.05*1e18;
@@ -30,7 +30,7 @@ contract Stub_CurveFi_Swap is Initializable,Context{
         __fee = _fee;
     }
 
-    function add_liquidity(uint256[N_COINS] memory amounts, uint256 min_mint_amount) public{
+    function add_liquidity(uint256[N_COINS] memory amounts, uint256 min_mint_amount) public override{
         uint256 mint_amount = calculateMintAmount(amounts);
         require(mint_amount >= min_mint_amount,'Min mint amount failed');
         
@@ -38,11 +38,11 @@ contract Stub_CurveFi_Swap is Initializable,Context{
         for(uint i = 0 ; i < N_COINS ; i++){
           IRenERC20(__coins[i]).transferFrom(_msgSender(), address(this), amounts[i]);
         }
-        
-        ERC20LPToken(__token).mint(_msgSender(), mint_amount);
+      
+        LPToken(__token).mint(_msgSender(), mint_amount);
     }
 
-    function remove_liquidity (uint256 _amount, uint256[N_COINS] memory min_amounts) public {
+    function remove_liquidity (uint256 _amount, uint256[N_COINS] memory min_amounts) public override{
         uint256 total_supply = IERC20(__token).totalSupply();
         uint256[] memory amounts = new uint256[](__coins.length);
 
@@ -55,7 +55,7 @@ contract Stub_CurveFi_Swap is Initializable,Context{
         ERC20Burnable(__token).burnFrom(_msgSender(), _amount);
     }
 
-    function remove_liquidity_imbalance(uint256[N_COINS] memory amounts, uint256 max_burn_amount) public {
+    function remove_liquidity_imbalance(uint256[N_COINS] memory amounts, uint256 max_burn_amount) public override{
         uint256 total_supply = IERC20(__token).totalSupply();
         require(total_supply > 0, "Nothing to withdraw");
 
@@ -157,7 +157,7 @@ contract Stub_CurveFi_Swap is Initializable,Context{
         }
     }
 
-    function balances(int128 i) public view returns(uint256) {
+    function balances(int128 i) public view override returns(uint256) {
         return __balances[uint(uint128(i))];//IERC20(__coins[uint256(i)]).balanceOf(address(this));
     }
 
@@ -165,7 +165,7 @@ contract Stub_CurveFi_Swap is Initializable,Context{
         return __fee;
     }
 
-    function coins(int128 i) public view returns (address) {
+    function coins(int128 i) public view override returns (address) {
         return __coins[uint(uint128(i))];
     }
 

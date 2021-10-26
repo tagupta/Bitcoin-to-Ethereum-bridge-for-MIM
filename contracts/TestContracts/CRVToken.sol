@@ -2,9 +2,9 @@
 pragma solidity >=0.4.22 <0.9.0;
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
-contract ERC20LPToken is ERC20{
+contract CRVToken is ERC20{
 
-    constructor() ERC20('Curve Token','LPT'){
+    constructor() ERC20('CRVToken','CRV'){
     }
 
     function mint(address _to, uint _value) external {
