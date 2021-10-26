@@ -9,7 +9,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import '../curvefi/ICurveFi_StableSwapRen.sol';
 import '../curvefi/IRenERC20.sol';
-import './LPToken.sol';
+import './Stub_LPToken.sol';
 
 contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
     
@@ -39,7 +39,7 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
           IRenERC20(__coins[i]).transferFrom(_msgSender(), address(this), amounts[i]);
         }
       
-        LPToken(__token).mint(_msgSender(), mint_amount);
+        Stub_LPToken(__token).mint(_msgSender(), mint_amount);
     }
 
     function remove_liquidity (uint256 _amount, uint256[N_COINS] memory min_amounts) public override{

@@ -3,7 +3,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
-import './CRVToken.sol';
+import './Stub_CRVToken.sol';
 import "../curvefi/ICurveFi_Minter.sol";
 import "../curvefi/ICurveFi_Gauge.sol";
 
@@ -47,7 +47,7 @@ contract Stub_CurveFi_Minter is ICurveFi_Minter, Initializable, Context{
         uint to_mint = total_mint - __minted[_for][gauge_addr];
         
         if(to_mint != 0){
-            CRVToken(__token).mint(_for, to_mint);
+            Stub_CRVToken(__token).mint(_for, to_mint);
             __minted[_for][gauge_addr] = total_mint;
         }
     }
