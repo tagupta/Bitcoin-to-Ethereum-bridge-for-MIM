@@ -15,17 +15,6 @@ interface IGatewayRegistry {
     function getTokenBySymbol(string calldata _tokenSymbol) external view returns (IERC20);
 }
 
-// interface IRenERC20{
-
-//     function balanceOf(address addr) external view returns(uint256);
-//     function totalSupply() external view returns(uint256);
-//     function allowance(address _owner, address _spender) external returns(uint256);
-//     function transfer(address _to, uint256 _value) external returns(bool);
-//     function transferFrom(address _from, address _value) external returns(bool);
-//     function approve(address _spender, uint256 _value) external returns(bool); 
-
-// }
-
 
 contract Basic{
 

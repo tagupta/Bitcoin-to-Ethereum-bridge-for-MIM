@@ -59,7 +59,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
 
         stablecoinsRenBTC = ICurveFi_StableSwapRen(curveFi_Swap).coins(0);
         stablecoinsWBTC = ICurveFi_StableSwapRen(curveFi_Swap).coins(1);
-
+        stablecoins = [stablecoinsRenBTC , stablecoinsWBTC];
+        
         for (uint256 i = 0; i < stablecoins.length; i++) {
             IERC20(stablecoins[i]).safeTransferFrom(_msgSender(), address(this), _amounts[i]);
             IERC20(stablecoins[i]).safeApprove(curveFi_Swap, _amounts[i]);
