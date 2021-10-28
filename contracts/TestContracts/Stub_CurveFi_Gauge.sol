@@ -20,7 +20,7 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
     address public __lp_token;
     uint public totalSupply;
 
-    mapping(address => uint) public balanceOf;
+    mapping(address => uint) public override balanceOf;
     //Total shares of CRV for the user
     mapping(address => uint) public __integrate_fraction;
     mapping (uint256 => uint) public integrate_inv_supply;

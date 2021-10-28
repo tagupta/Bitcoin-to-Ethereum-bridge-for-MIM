@@ -83,19 +83,49 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
         let renbtcBefore = await renBtc.balanceOf(accounts[2]);
         let wbtcBefore = await wBtc.balanceOf(accounts[2]);
 
-        console.log("RenBTC before " + renbtcBefore);
-        console.log("WBTC before " + wbtcBefore);
+        // console.log("RenBTC before " + renbtcBefore);
+        // console.log("WBTC before " + wbtcBefore);
 
-        await moneyToCurve.multiStepDeposit([deposits.renbtc, deposits.wbtc], {from:accounts[2]});
+        await truffleAssert.passes(moneyToCurve.multiStepDeposit([deposits.renbtc, deposits.wbtc], {from:accounts[2]}));
 
         let renbtcAfter = await renBtc.balanceOf(accounts[2]);
         let wbtcAfter = await wBtc.balanceOf(accounts[2]);
 
-        console.log("RenBTC after " + renbtcAfter);
-        console.log("WBTC after " + wbtcAfter);
+        // console.log("RenBTC after " + renbtcAfter);
+        // console.log("WBTC after " + wbtcAfter);
 
-        assert((renbtcBefore - renbtcAfter).toString() == (deposits.renbtc).toString(), 'Assert failed');
-    })
+        assert((renbtcBefore - renbtcAfter).toString() == (deposits.renbtc).toString(),'Unable to deposit RenBTC to curve');
+        assert((wbtcBefore - wbtcAfter).toString() == (deposits.wbtc).toString(), 'Unable to deposit wBTC to curve');
+    });
+
+    it('Renpool tokens are deposited to curve.fi swap', async () => {
+      let swaprenBTC = await renBtc.balanceOf(curveSwap.address);
+      let depositrenBTC = deposits.renbtc;
+
+      let swapwBTC = await renBtc.balanceOf(curveSwap.address);
+      let depositwBTC = deposits.renbtc;
+
+    //   console.log('swaprenBTC ' + swaprenBTC);
+    //   console.log('depositrenBTC ' + depositrenBTC);
+
+      assert(swaprenBTC.toString() == depositrenBTC.toString(),'RenBTC not deposited in curve.Fi swap');
+      assert(swapwBTC.toString() == depositwBTC.toString(),'wBTC not deposited in curve.Fi swap');
+    });
+
+    it('Curve.Fi LP-tokens are staked in Gauge', async () =>{
+        let lptokens = deposits.renbtc.add(deposits.wbtc);
+        let stakedTokens  = await moneyToCurve.curveLPTokenStaked();
+        // console.log('lptokens ' + lptokens);
+        // console.log('stakedTokens ' + stakedTokens);
+
+        assert(lptokens.toString() == stakedTokens.toString(), 'Staking failed');
+    });
+
+    it('CRV tokens are minted and transfered to the user', async() => {
+        let crvBalance = await crvToken.balanceOf(accounts[2]);
+        //console.log("crvBalance " + crvBalance);
+        assert(crvBalance > 0 , 'CRVs not transfered to user');
+    });
     
 
 

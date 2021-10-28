@@ -89,4 +89,11 @@ contract RenBTCtoCurve is Initializable, Ownable{
         ICurveFi_Minter(curveFi_CRVMinter).mint(curveFi_LPGauge);
     }
 
+    /**
+     * @notice Get amount of CurveFi LP tokens staked in the Gauge
+     */
+    function curveLPTokenStaked() public view returns(uint256) {
+        return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(address(this));
+    }
+
 }

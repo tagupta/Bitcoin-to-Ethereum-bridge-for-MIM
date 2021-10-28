@@ -6,7 +6,7 @@ interface ICurveFi_Gauge{
     function lp_token() external view returns(address);
     function crv_token() external view returns(address);
  
-    //function balanceOf(address arg0) external view returns (uint256);
+    function balanceOf(address arg0) external view returns (uint256);
 
     // function deposit(uint256 _value, address addr) external;
     function deposit(uint256 _value) external;
