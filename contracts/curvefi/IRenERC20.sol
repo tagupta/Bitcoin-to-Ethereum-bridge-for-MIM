@@ -12,4 +12,7 @@ interface IRenERC20{
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    function exchangeRateCurrent() external view returns(uint);
+    function set_exchange_rate(uint rate) external;
 }

@@ -75,7 +75,7 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
         uint old_bal = working_balances[addr];
         working_balances[addr] = lim;
         working_supply = working_supply + lim - old_bal;
-        L+=1; //using L just to ignore warning
+        L+=1; //using L just to avoid warning
     }
 
     function deposit(uint _value) public override{

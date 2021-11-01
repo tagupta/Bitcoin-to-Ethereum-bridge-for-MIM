@@ -52,7 +52,7 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
             require(amounts[i] >= min_amounts[i], "Min withdraw amount failed");
             IRenERC20(__coins[i]).transfer(_msgSender(), amounts[i]);
         }
-        ERC20Burnable(__token).burnFrom(_msgSender(), _amount);
+        Stub_LPToken(__token).burn(_msgSender(), _amount);
     }
 
     function remove_liquidity_imbalance(uint256[N_COINS] memory amounts, uint256 max_burn_amount) public override{
@@ -68,7 +68,7 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
         }
 
         require(max_burn_amount == 0 || token_amount <= max_burn_amount, "Min burn amount failed");
-        ERC20Burnable(__token).burnFrom(_msgSender(), token_amount);
+        Stub_LPToken(__token).burn(_msgSender(), token_amount);
     }
 
     function calculateMintAmount(uint256[N_COINS] memory amounts)internal returns(uint256){
