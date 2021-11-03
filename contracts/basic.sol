@@ -3,6 +3,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
 }
 
 interface IGateway {
@@ -31,6 +32,18 @@ contract Basic{
         bytes32 pHash = keccak256(abi.encode(_msg));
         uint256 mintedAmount = registry.getGatewayBySymbol("BTC").mint(pHash, _amount, _nHash, _sig);
         emit Deposit(mintedAmount, _msg);
+    }
+    
+    function temporaryMint(address to, 
+                           bytes32 nonce, 
+                           string calldata symbol,
+                           uint _amount,
+                           bytes32 _nHash,
+                           bytes calldata _sig) external{
+
+        bytes32 pHash = keccak256(abi.encode(to, nonce));
+        uint256 mintedAmount = registry.getGatewayBySymbol(symbol).mint(pHash, _amount, _nHash, _sig);
+        require(registry.getTokenBySymbol(symbol).transfer(to, mintedAmount), 'failed to transfer token');                           
     }
 
     function withdraw(bytes calldata _msg, bytes calldata _to, uint256 _amount) external {
