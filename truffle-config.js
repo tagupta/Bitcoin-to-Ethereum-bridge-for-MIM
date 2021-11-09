@@ -19,7 +19,7 @@
  */
 
  const HDWalletProvider = require('@truffle/hdwallet-provider');
- const privateKey = "11d3bdae4ef03f9e65e44f127f56885dab841b04cdf9d50146fb2bec222cf3b3";
+//  const privateKey = "11d3bdae4ef03f9e65e44f127f56885dab841b04cdf9d50146fb2bec222cf3b3";
  const endpointUrl = "https://kovan.infura.io/v3/42594b3789a646e6ac496235a12f545e";
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
@@ -42,11 +42,13 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    // development: {
-    //  host: "127.0.0.1",     // Localhost (default: none)
-    //  port: 8545,            // Standard Ethereum port (default: none)
-    //  network_id: "*",       // Any network (default: none)
-    // },
+    development: {
+     host: "127.0.0.1",     // Localhost (default: none)
+     port: 8545,            // Standard Ethereum port (default: none)
+     network_id: "*",       // Any network (default: none)
+     gas: 999999999,           // Gas sent with each transaction (default: ~6700000)
+    //  gasPrice: 20000000000
+    },
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -66,14 +68,14 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-    kovan: {
-      provider: function() {
-        return new HDWalletProvider(privateKey,endpointUrl)
-      },
-      gas: 10000000,
-      gasPrice: 25000000000,
-      network_id: 42
-    }
+    // kovan: {
+    //   provider: function() {
+    //     return new HDWalletProvider(privateKey,endpointUrl)
+    //   },
+    //   gas: 10000000,
+    //   gasPrice: 25000000000,
+    //   network_id: 42
+    // }
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
@@ -90,7 +92,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.0",    // Fetch exact version from solc-bin (default: truffle's version)
+      version: "0.5.17",    // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       // settings: {          // See the solidity docs for advice about optimization and evmVersion
       //  optimizer: {

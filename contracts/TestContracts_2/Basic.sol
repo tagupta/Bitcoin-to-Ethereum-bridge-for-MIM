@@ -24,7 +24,7 @@ contract Basic{
     event Deposit(uint256 _amount, bytes _msg);
     event Withdrawal(bytes _to, uint256 _amount, bytes _msg);
 
-    constructor(IGatewayRegistry _registry){
+    constructor (IGatewayRegistry _registry)public{
         registry = _registry;
     }
 
