@@ -4,6 +4,10 @@ pragma solidity >=0.4.22 <0.9.0;
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
     function transfer(address recipient, uint256 amount) external returns (bool);
+    function totalSupply() external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender,address recipient,uint256 amount) external returns (bool);
 }
 
 interface IGateway {
@@ -50,8 +54,24 @@ contract Basic{
         uint256 burnedAmount = registry.getGatewayBySymbol("BTC").burn(_to, _amount);
         emit Withdrawal(_to, burnedAmount, _msg);
     }
-
+    
     function balance() public view returns (uint256) {
         return registry.getTokenBySymbol("BTC").balanceOf(address(this));
+    }
+
+    function userBalance(address _address) public view returns(uint){
+        return registry.getTokenBySymbol("BTC").balanceOf(_address);
+    }
+
+    function getRenERC20() public view returns(IERC20){
+        return registry.getTokenBySymbol('BTC');
+    }
+
+    function getApproval(address spender, uint amount) public returns(bool){
+        return registry.getTokenBySymbol("BTC").approve(spender, amount);
+    }
+
+    function getAllowance(address owner, address spender) public view returns(uint){
+        return registry.getTokenBySymbol("BTC").allowance(owner, spender);
     }
 }
