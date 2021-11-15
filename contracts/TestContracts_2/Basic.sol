@@ -54,6 +54,14 @@ contract Basic{
         uint256 burnedAmount = registry.getGatewayBySymbol("BTC").burn(_to, _amount);
         emit Withdrawal(_to, burnedAmount, _msg);
     }
+
+    function temporaryBurn(bytes calldata _msg, bytes calldata _to, uint256 _amount, address from) external {
+        // registry.getTokenBySymbol("BTC").approve(address(this), _amount);
+        require(registry.getTokenBySymbol("BTC").transferFrom(from,address(this),_amount),"token transfer failed"
+        );
+        uint256 burnedAmount = registry.getGatewayBySymbol("BTC").burn(_to, _amount);
+        emit Withdrawal(_to, burnedAmount, _msg);
+    }
     
     function balance() public view returns (uint256) {
         return registry.getTokenBySymbol("BTC").balanceOf(address(this));
@@ -65,13 +73,5 @@ contract Basic{
 
     function getRenERC20() public view returns(IERC20){
         return registry.getTokenBySymbol('BTC');
-    }
-
-    function getApproval(address spender, uint amount) public returns(bool){
-        return registry.getTokenBySymbol("BTC").approve(spender, amount);
-    }
-
-    function getAllowance(address owner, address spender) public view returns(uint){
-        return registry.getTokenBySymbol("BTC").allowance(owner, spender);
-    }
+    }   
 }

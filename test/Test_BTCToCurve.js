@@ -29,12 +29,12 @@ const MoneyToCurve = artifacts.require('RenBTCtoCurve');
 
 const supplies = {
     renbtc : new BN('1000000000000000000000000'),
-    wbtc : new BN('1000000000000')
+    wbtc : new BN('1000000000000000000000000') //1000000000000
 };
 
 const deposits  = {
     renbtc: new BN('100000000000000000000'), 
-    wbtc: new BN('200000000'), 
+    wbtc: new BN('100000000000000000000'), //200000000
 }
 
 contract('Witnessing the transition of BTC to CRV Token', async accounts => {
@@ -48,11 +48,11 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     let user;
     let balanceAfter;
     let renBTCAddress;
-// *************************************************************************
-    let _renBtc;
+  // *************************************************************************
     let renBtc;
     let wBtc;
     let _wBtc;
+    let renBTCWithdraw;
     let curveLPToken;
     let curveSwap;
 
@@ -61,6 +61,10 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     let curveGauge;
 
     let moneyToCurve;
+
+    let swaprenBTC;
+    let swapwBTC;
+    const tempBTCadd = '183Y3PKMjkmH4vLTzZwpkVAxp45RTuz9rZ';
 
     before(async () =>{
 
@@ -94,13 +98,18 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         user = await provider.getSigner();
 
 // *************************************************************************
+
         _renBtc  = await RENBTC.deployed();
         _wBtc = await WBTC.deployed();
         renBtc = await RENERC20.at(renBTCAddress,{from: accounts[0]});
+
         console.log("renBtc address: " +renBtc.address);
+
         wBtc = await RENERC20.new({from: accounts[0]});
         await wBtc.initialize(_wBtc.address);
         wBtc.mint(accounts[0], supplies.wbtc, {from: accounts[0]});
+        //wBtc.mint(accounts[0],0, {from: accounts[0]});
+
 
         curveLPToken = await CurveLPToken.deployed();
 
@@ -109,6 +118,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         //address[N_COINS] memory _coins, address _pool_token, uint256 _fee
 
         crvToken = await CRVToken.deployed();
+        console.log("crvToken address: " + crvToken.address);
 
         curveMinter = await CurveCRVMinter.deployed();
         await curveMinter.initialize(crvToken.address, {from: accounts[0]});
@@ -121,8 +131,9 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         await moneyToCurve.setup(curveSwap.address, curveGauge.address, curveMinter.address,curveLPToken.address, {from:accounts[1]});
         console.log("moneyToCurve address: "+ moneyToCurve.address);
 
-        //preliminary balances
-        await wBtc.transfer(accounts[2], new BN('1000000000'), {from: accounts[0]});
+        //preliminary balances 1000000000
+        await wBtc.transfer(accounts[2], new BN('1000000000000000000000'), {from: accounts[0]});
+        //await wBtc.transfer(accounts[2],0, {from: accounts[0]});
     });
 
     it('Checking the minting of renBTC from BTC', async () => {
@@ -185,6 +196,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         });
 
         balanceAfter = await adapter.userBalance(accounts[2]);
+        console.log('balanceAfter: '+ balanceAfter);
 
         const expected = satsAmount.minus(fixedFee).times(1 - percentFee / 10000).integerValue(BigNumber.ROUND_UP);
         assert((balanceAfter - balanceBefore).toString() == expected.toString(),'Problem with minting of renBTC');
@@ -193,12 +205,15 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     it('Deposit the money into Defi', async () =>{
 
         await renBtc.approve(moneyToCurve.address, balanceAfter, {from: accounts[2]});
-        await wBtc.approve(moneyToCurve.address, deposits.wbtc, {from:accounts[2]});
+        //await wBtc.approve(moneyToCurve.address,0, {from:accounts[2]});
+        await wBtc.approve(moneyToCurve.address,deposits.wbtc, {from:accounts[2]});
 
         let renbtcBefore = await adapter.userBalance(accounts[2]);
+        renBTCWithdraw = renbtcBefore;
+
         let wbtcBefore = await wBtc.balanceOf(accounts[2]);
 
-        await moneyToCurve.multiStepDeposit([balanceAfter, deposits.wbtc], {from:accounts[2]});
+        await truffleAssert.passes(moneyToCurve.multiStepDeposit([balanceAfter,deposits.wbtc], {from:accounts[2]}));
 
         let renbtcAfter = await adapter.userBalance(accounts[2]);
         let wbtcAfter = await wBtc.balanceOf(accounts[2]);
@@ -209,6 +224,99 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         console.log('wbtcBefore curveFi: '+ wbtcBefore);
         console.log('wbtcAfter curveFi: '+ wbtcAfter);
     });
+    
+    it('Renpool tokens are deposited to curve.fi swap', async () => {
+      swaprenBTC = await renBtc.balanceOf(curveSwap.address);
+      swapwBTC = await wBtc.balanceOf(curveSwap.address);
+
+      console.log("swaprenBTC: " + swaprenBTC);
+      console.log("swapwBTC: " + swapwBTC);
+    });
+
+    it('Curve.Fi LP-tokens are staked in Gauge', async () =>{
+      let lptokens = swaprenBTC.mul(new BN('10000000000')).add(swapwBTC);
+      let stakedTokens  = await moneyToCurve.curveLPTokenStaked();
+
+      console.log("lptokens: " + lptokens);
+      console.log("stakedTokens: " + stakedTokens);
+
+      assert(lptokens.toString() == stakedTokens.toString(),'CurveFi: problem with the staking');
+    });
+
+    it('CRV tokens are minted and transfered to the user', async() => {
+      let crvBalance = await crvToken.balanceOf(accounts[2]);
+      console.log("crvBalance: " + crvBalance);
+      // assert(crvBalance > 0 , 'CRVs not transfered to user');
+    });
+
+    it('Withdraw money from curve.fi', async () =>{
+      
+      let renbtcBefore = await adapter.userBalance(accounts[2]);
+      let wbtcBefore = await wBtc.balanceOf(accounts[2]);
+
+      console.log("renbtcBefore: " + renbtcBefore);
+      console.log("wbtcBefore: "+ wbtcBefore);
+
+      
+      await moneyToCurve.multiStepWithdraw([balanceAfter,100000000000],{from:accounts[2]});
+
+      let renbtcAfter = await renBtc.balanceOf(accounts[2]);
+      let wbtcAfter = await wBtc.balanceOf(accounts[2]);
+
+      console.log("renbtcAfter: " + renbtcAfter);
+      console.log("wbtcAfter: "+ wbtcAfter);
+      
+      // assert((renbtcAfter - renbtcBefore).toString() == (deposits.renbtc).toString(), 'Withdrawal falied for renBTC');
+      // assert((wbtcAfter - wbtcBefore).toString() == (deposits.wbtc).toString(), 'Withdrawal falied for wBTC');
+
+    });
+
+    it('should be able to burn the minted tokens', async () =>{
+      const amount = balanceAfter / 10 ** 8;
+      await renBtc.approve(adapter.address, balanceAfter,{from: accounts[2]})
+      const burnAndRelease = await renJS.burnAndRelease({
+        asset: "BTC",
+        to: Bitcoin.Address(tempBTCadd),
+        from: Ethereum({provider: user.provider, signer: user},network).Contract((btcAddress) => ({
+          sendTo: adapter.address,
+          contractFn: "temporaryBurn",
+          contractParams: [
+          {
+            type: "bytes",
+            name: "_msg",
+            value: Buffer.from(`Withdrawing ${amount} BTC`),
+          },
+          {
+            type: "bytes",
+            name: "_to",
+            value: btcAddress,
+          },
+          {
+            type: "uint256",
+            name: "_amount",
+            value: renJS.utils.toSmallestUnit(amount, 8),
+          },
+          {
+            type: 'address',
+            name: 'from',
+            value: accounts[2]
+          }
+          ],
+        }))
+
+       });
+       
+       await burnAndRelease.burn();
+       await burnAndRelease.release();
+
+      let afterBurnBalance =  await adapter.userBalance(accounts[2]);
+      console.log("afterBurnBalance: "+ afterBurnBalance);
+      
+    });
+
+
+
+
 });
 
 const LocalEthereumNetwork = (networkID, gatewayRegistryAddress, basicAdapterAddress) =>({
