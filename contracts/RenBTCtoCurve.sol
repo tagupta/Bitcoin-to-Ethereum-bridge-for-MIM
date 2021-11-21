@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
+// import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
+// import '@openzeppelin/contracts/utils/Context.sol';
+// import '@openzeppelin/contracts/access/Ownable.sol';
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+// import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+// import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+// import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
+
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import './curvefi/ICurveFi_StableSwapRen.sol';
 import './curvefi/ICurveFi_Gauge.sol';
@@ -15,6 +23,7 @@ import './curvefi/ICurveFi_Minter.sol';
 import './curvefi/IRenERC20.sol';
 
 contract RenBTCtoCurve is Initializable, Ownable{
+    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public curveFi_Swap;
@@ -22,6 +31,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
     address public curveFi_LPGauge;
     address public curveFi_CRVMinter;
     address public curveFi_CRVToken; 
+
+    function initialize() external initializer {
+        Ownable.initialize(_msgSender());
+    }
 
     /**
      * @notice Set CurveFi contracts addresses
@@ -52,10 +65,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
      * @notice Deposits 2 stablecoins (registered in Curve.Fi Y pool)
      * @param _amounts Array of amounts for CurveFI stablecoins in pool (denormalized to token decimals)
      */
-    function multiStepDeposit(uint[2] memory _amounts) public {
+    function multiStepDeposit(uint256[2] memory _amounts) public {
         address[2] memory stablecoins;
         
-        for(uint i = 0 ; i < stablecoins.length ; i++){
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
             stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
         }
         
@@ -86,26 +99,101 @@ contract RenBTCtoCurve is Initializable, Ownable{
     function crvTokenClaim() internal {
         ICurveFi_Minter(curveFi_CRVMinter).mint(curveFi_LPGauge);
     }
+    /************************************************************************************/
 
-    function multiStepWithdraw(uint[2] memory _amounts)public {
+    function dummmymultiStepWithdraw_11(uint256[2] memory _amounts)public view returns(uint){
         address[2] memory stablecoins;
-        uint nWithdraw;
+        uint256 nWithdraw;
        
-        for(uint i = 0 ; i < stablecoins.length ; i++){
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
             stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
         }
         
         //Step 1 - Calculate amount of Curve LP-tokens to unstake
-        for(uint i = 0 ; i < stablecoins.length ; i++){
-            nWithdraw = nWithdraw + normalize(stablecoins[i], _amounts[i]);
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            nWithdraw = nWithdraw + (normalize(stablecoins[i], _amounts[i]));
         }
 
-        uint withdrawShares = calculateShares(nWithdraw);
+        return nWithdraw;
+    }
+
+    function dummmymultiStepWithdraw_12(uint nWithdraw)public returns(uint256){
+        uint256 withdrawShares = calculateShares(nWithdraw);
+        return withdrawShares;
+    }
+
+    function dummmymultiStepWithdraw_1112(uint256[2] memory _amounts) public returns(uint256){
+         address[2] memory stablecoins;
+        uint256 nWithdraw;
+       
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
+        }
+        
+        //Step 1 - Calculate amount of Curve LP-tokens to unstake
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            nWithdraw = nWithdraw + (normalize(stablecoins[i], _amounts[i]));
+        }
+
+        return calculateShares(nWithdraw);
+    }
+
+    function dummmymultiStepWithdraw_13(uint withdrawShares)public returns(uint256){
+        //Check if you can re-use unstaked LP tokens
+        uint256 notStaked = curveLPTokenUnstaked();
+        if (notStaked > 0) {
+            withdrawShares = withdrawShares.sub(notStaked);
+        }
+        return withdrawShares;
+    }
+    
+    function dummmymultiStepWithdraw_2(uint256 withdrawShares) public{
+        ICurveFi_Gauge(curveFi_LPGauge).withdraw(withdrawShares);
+    }
+
+    function dummmymultiStepWithdraw_3(uint256 withdrawShares)public{
+         IERC20(curveFi_LPToken).safeApprove(curveFi_Swap, withdrawShares);
+    }
+
+    function dummmymultiStepWithdraw_4(uint256[2] memory _amounts, uint256 withdrawShares)public{
+        ICurveFi_StableSwapRen(curveFi_Swap).remove_liquidity_imbalance(_amounts, withdrawShares);
+
+    }
+
+    function dummmymultiStepWithdraw_5(uint256[2] memory _amounts) public{
+        address[2] memory stablecoins;
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
+        }
+
+        for (uint256 i = 0; i <  stablecoins.length; i++){
+            IERC20 _stablecoin = IERC20(stablecoins[i]);
+            uint256 balance = _stablecoin.balanceOf(address(this));
+            uint256 amount = (balance <= _amounts[i]) ? balance : _amounts[i]; //Safepoint for rounding
+            _stablecoin.safeTransfer(_msgSender(), amount);
+        }
+    }
+    /************************************************************************************/
+
+    function multiStepWithdraw(uint256[2] memory _amounts)public {
+        address[2] memory stablecoins;
+        uint256 nWithdraw;
+       
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
+        }
+        
+        //Step 1 - Calculate amount of Curve LP-tokens to unstake
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            nWithdraw = nWithdraw.add(normalize(stablecoins[i], _amounts[i]));
+        }
+
+        uint256 withdrawShares = calculateShares(nWithdraw);
 
         //Check if you can re-use unstaked LP tokens
-        uint notStaked = curveLPTokenUnstaked();
+        uint256 notStaked = curveLPTokenUnstaked();
         if (notStaked > 0) {
-            withdrawShares = withdrawShares - notStaked;
+            withdrawShares = withdrawShares.sub(notStaked);
         }
 
         //Step 2 - Unstake Curve LP tokens from Gauge
@@ -116,7 +204,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
         ICurveFi_StableSwapRen(curveFi_Swap).remove_liquidity_imbalance(_amounts, withdrawShares);
 
         //Step 4 - Send stablecoins to the requestor
-        for (uint i = 0; i <  stablecoins.length; i++){
+        for (uint256 i = 0; i <  stablecoins.length; i++){
             IERC20 _stablecoin = IERC20(stablecoins[i]);
             uint256 balance = _stablecoin.balanceOf(address(this));
             uint256 amount = (balance <= _amounts[i]) ? balance : _amounts[i]; //Safepoint for rounding
@@ -124,52 +212,52 @@ contract RenBTCtoCurve is Initializable, Ownable{
         }
     }
 
-    function calculateShares(uint normalizedWithdraw)public view returns(uint){
-        uint nBalance = normalizedBalance();
-        uint poolShares = curveLPTokenBalance();
+    function calculateShares(uint256 normalizedWithdraw)public view returns(uint256){
+        uint256 nBalance = normalizedBalance();
+        uint256 poolShares = curveLPTokenBalance();
         
-        return poolShares * normalizedWithdraw / nBalance;
+        return poolShares.mul(normalizedWithdraw).div(nBalance);
     }
 
-    function normalizedBalance()public view returns(uint){
+    function normalizedBalance()public view returns(uint256){
         address[2] memory stablecoins;
 
-        for(uint i = 0 ; i < stablecoins.length ; i++){
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
             stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
         }
 
-        uint[2] memory balances = balanceOfAll();
-        uint256 sum;
+        uint256[2] memory balances = balanceOfAll();
+        uint256 summ;
 
         for (uint256 i=0; i < stablecoins.length; i++){
-            sum = sum + normalize(stablecoins[i], balances[i]);
+            summ = summ.add(normalize(stablecoins[i], balances[i]));
         }
 
-        return sum;
+        return summ;
     } 
 
-    function balanceOfAll()internal view returns(uint[2] memory){
+    function balanceOfAll()public view returns(uint256[2] memory){
         address[2] memory stablecoins;
-        uint [2] memory balances;
+        uint256 [2] memory balances;
 
-        for(uint i = 0 ; i < stablecoins.length ; i++){
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
             stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
         }
 
-        uint curveLPBalance = curveLPTokenBalance();
-        uint curveLPTokenSupply = IERC20(curveFi_LPToken).totalSupply();
+        uint256 curveLPBalance = curveLPTokenBalance();
+        uint256 curveLPTokenSupply = IERC20(curveFi_LPToken).totalSupply();
 
         require(curveLPTokenSupply > 0, "No Curve LP tokens minted");
 
-        for(uint i = 0 ; i < stablecoins.length ; i++){
-            uint renLPTokenBalance = ICurveFi_StableSwapRen(curveFi_Swap).balances(int128(uint128(i)));
+        for(uint256 i = 0 ; i < stablecoins.length ; i++){
+            uint256 renLPTokenBalance = ICurveFi_StableSwapRen(curveFi_Swap).balances(int128(uint128(i)));
             address renCoin = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
             
             //Calculate user's share of ren tokens
-            uint renShares = renLPTokenBalance * curveLPBalance / curveLPTokenSupply;
-            uint renPrice = IRenERC20(renCoin).exchangeRateCurrent();
+            uint256 renShares = renLPTokenBalance.mul(curveLPBalance).div(curveLPTokenSupply);
+            uint256 renPrice = IRenERC20(renCoin).exchangeRateCurrent();
 
-            balances[i] = renPrice * renShares / 1e18;
+            balances[i] = renPrice.mul(renShares).div(1e18);
         }
         return balances;
     }
@@ -181,7 +269,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
     function curveLPTokenBalance() public view returns(uint256) {
         uint256 staked = curveLPTokenStaked();
         uint256 unstaked = curveLPTokenUnstaked();
-        return unstaked + staked;
+        return unstaked.add(staked);
     }
 
     /**
@@ -201,16 +289,17 @@ contract RenBTCtoCurve is Initializable, Ownable{
     /**
      * @notice Util to normalize balance up to 18 decimals
      */
-    function normalize(address coin, uint256 amount) internal view returns(uint result) {
-       uint8 decimal  = ERC20(coin).decimals();
+     //just for testing : internal => public
+    function normalize(address coin, uint256 amount) public view returns(uint256) {
+       uint8 decimal  = ERC20Detailed(coin).decimals();
         if(decimal == 18){
-            result =  amount; 
+           return  amount; 
         }
         else if(decimal > 18){
-            result =  amount / (10 ** (decimal-18));
-        }
+           return amount / ((10)**(decimal-18));
+        } 
         else if(decimal < 18){
-            result = amount * (10 ** (18-decimal));
+           return amount * ((10)**(18 - decimal));
         }
     }
 

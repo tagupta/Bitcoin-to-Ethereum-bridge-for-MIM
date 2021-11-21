@@ -12,6 +12,6 @@ module.exports = async function (deployer,network,accounts) {
     mockRenVMProvider.registerChain(Bitcoin);
 
     const mintAuthority =  mockRenVMProvider.mintAuthority();
-    const gatewayFactory = await GatewayFactory.new(mintAuthority, "Ethereum", {from: accounts[0]});
-   //deployer.deploy(GatewayFactory,mintAuthority,"Ethereum");
+    //const gatewayFactory = await GatewayFactory.new(mintAuthority, "Ethereum", {from: accounts[0]});
+   deployer.deploy(GatewayFactory,mintAuthority,"Ethereum");
 };

@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+// import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
+// import '@openzeppelin/contracts/utils/Context.sol';
+// import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+
 import "../curvefi/ICurveFi_Minter.sol";
 import "../curvefi/ICurveFi_Gauge.sol";
 
 contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
+    using SafeMath for uint256;
+
    //CRV distribution number
     uint128 period;
     //Simplification to keep timestamp
@@ -20,7 +28,7 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
     address public __lp_token;
     uint public totalSupply;
 
-    mapping(address => uint) public override balanceOf;
+    mapping(address => uint) public balanceOf;
     //Total shares of CRV for the user
     mapping(address => uint) public __integrate_fraction;
     mapping (uint256 => uint) public integrate_inv_supply;
@@ -43,7 +51,7 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
         period_timestamp = block.timestamp;
     }
 
-    function user_checkpoint(address addr)public override returns(bool){
+    function user_checkpoint(address addr)public returns(bool){
         require(msg.sender == addr || msg.sender == __minter, "Unauthorized minter");
         _checkpoint(addr);
         _update_liquidity_limit(addr, balanceOf[addr],totalSupply); // totalsupply - 3rd parameter
@@ -78,12 +86,12 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
         L+=1; //using L just to avoid warning
     }
 
-    function deposit(uint _value) public override{
+    function deposit(uint _value) public {
       _checkpoint(_msgSender());
 
       if (_value != 0){
-        balanceOf[_msgSender()] +=  _value;
-        totalSupply +=  _value;
+        balanceOf[_msgSender()] = balanceOf[_msgSender()].add(_value);
+        totalSupply = totalSupply.add(_value);
 
         _update_liquidity_limit(_msgSender(),  balanceOf[_msgSender()], totalSupply);
 
@@ -92,34 +100,34 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
         
     }
 
-    function withdraw(uint _value)public override{
+    function withdraw(uint _value)public {
         _checkpoint(_msgSender());
-        balanceOf[_msgSender()] -= _value;
-        totalSupply -= _value;
+        balanceOf[_msgSender()] = balanceOf[_msgSender()].sub(_value);
+        totalSupply = totalSupply.sub(_value);
 
         _update_liquidity_limit(_msgSender(), balanceOf[_msgSender()], totalSupply);
         
         IERC20(__lp_token).transfer(_msgSender(), _value);
     }
 
-    function claimable_tokens(address addr)public override returns(uint){
+    function claimable_tokens(address addr)public returns(uint){
         _checkpoint(addr);
         return __integrate_fraction[addr] - ICurveFi_Minter(__minter).minted(addr, address(this));
     }
 
-    function minter() public view override returns(address) {
+    function minter() public view returns(address) {
         return __minter;
     }
 
-    function crv_token() public view override returns(address) {
+    function crv_token() public view returns(address) {
         return __crv_token;
     }
 
-    function lp_token() public view override returns(address) {
+    function lp_token() public view returns(address) {
         return __lp_token;
     }
 
-    function integrate_fraction(address _for) public view override returns(uint256) {
+    function integrate_fraction(address _for) public view returns(uint256) {
         return __integrate_fraction[_for];
     }
 

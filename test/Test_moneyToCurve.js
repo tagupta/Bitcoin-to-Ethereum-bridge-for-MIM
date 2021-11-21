@@ -1,10 +1,11 @@
 const { BN } = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
 
-const RENBTC = artifacts.require('Stub_RenBTC');
-const WBTC = artifacts.require('Stub_WBTC');
+// const RENBTC = artifacts.require('Stub_RenBTC');
+// const WBTC = artifacts.require('Stub_WBTC');
 const RENERC20 = artifacts.require('Stub_RenERC20');
-const CRVToken = artifacts.require('Stub_CRVToken');
+// const CRVToken = artifacts.require('Stub_CRVToken');
+const ERC20 = artifacts.require('Stub_ERC20');
 
 const CurveSwap = artifacts.require('Stub_CurveFi_Swap');
 const CurveLPToken = artifacts.require('Stub_LPToken');
@@ -45,33 +46,40 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
     let moneyToCurve;
 
     before(async() =>{
-        _renBtc = await RENBTC.deployed();
-        
-        _wBtc = await WBTC.deployed();
-        
+        _renBtc = await ERC20.new({from: accounts[0]});
+        await _renBtc.initialize('renBTC','renBTC',18);
+
+        _wBtc = await ERC20.new({from: accounts[0]});
+        await _wBtc.initialize('wBTC','wBTC',18);
+
         renBtc = await RENERC20.new({from: accounts[0]});
-        await renBtc.initialize(_renBtc.address);
-        renBtc.mint(accounts[0], supplies.renbtc, {from: accounts[0]});
+        await renBtc.initialize(_renBtc.address,'ren_RENBTC',18,supplies.renbtc);
 
         wBtc = await RENERC20.new({from: accounts[0]});
-        await wBtc.initialize(_wBtc.address);
-        wBtc.mint(accounts[0], supplies.wbtc, {from: accounts[0]});
+        await wBtc.initialize(_wBtc.address,'ren_wBTC',18,supplies.wbtc);
 
         curveLPToken = await CurveLPToken.deployed();
+        await curveLPToken.initialize();
 
         curveSwap = await CurveSwap.deployed();
         await curveSwap.initialize([renBtc.address,wBtc.address],curveLPToken.address,10,{from: accounts[0]}); //address[N_COINS] memory _coins, address _pool_token, uint256 _fee
-        
-        crvToken = await CRVToken.deployed();
+        await curveLPToken.addMinter(curveSwap.address, {from:accounts[0]});
+
+        crvToken = await ERC20.new({from: accounts[0]});
+        await crvToken.initialize('CRV','CRV',18);
 
         curveMinter = await CurveCRVMinter.deployed();
         await curveMinter.initialize(crvToken.address, {from: accounts[0]});
-        
+        await crvToken.addMinter(curveMinter.address, { from: accounts[0]});
+
         curveGauge = await CurveGauge.deployed();
         await curveGauge.initialize(curveLPToken.address, curveMinter.address,{from: accounts[0]});
+        await crvToken.addMinter(curveGauge.address, {from: accounts[0]});
+
 
         //Main contract
         moneyToCurve = await MoneyToCurve.deployed();
+        await moneyToCurve.initialize({from:accounts[1]});
         await moneyToCurve.setup(curveSwap.address, curveGauge.address, curveMinter.address,curveLPToken.address, {from:accounts[1]});
 
         //preliminary balances
@@ -83,7 +91,6 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
 
     });
 
-   
     it('Deposit the money into the Defi', async () => {
 
         await renBtc.approve(moneyToCurve.address, deposits.renbtc, {from:accounts[2]});

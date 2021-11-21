@@ -19,7 +19,7 @@
  */
 
  const HDWalletProvider = require('@truffle/hdwallet-provider');
-//  const privateKey = "11d3bdae4ef03f9e65e44f127f56885dab841b04cdf9d50146fb2bec222cf3b3";
+ const privateKey = "0x18efa30c6b1bc2557dc02381956ea1204a780a1a6f2c2bbb4d7f5d9da52d40ad";
  const endpointUrl = "https://kovan.infura.io/v3/42594b3789a646e6ac496235a12f545e";
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
@@ -49,6 +49,12 @@ module.exports = {
      gas: 999999999,           // Gas sent with each transaction (default: ~6700000) 0x3B9AC9FF
     //  gasPrice: 20000000000
     },
+    // ganache: {
+    //   provider: () => new HDWalletProvider(mnemonicDev, `HTTP://127.0.0.1:7545`),
+    //   host: "127.0.0.1",     // Localhost (default: none)
+    //   network_id: "*" ,      // Any network (default: none)
+    //   gas: 999999999,
+    //  },
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -74,7 +80,9 @@ module.exports = {
     //   },
     //   gas: 10000000,
     //   gasPrice: 25000000000,
-    //   network_id: 42
+    //   network_id: 42,
+    //   networkCheckTimeout: 100000000,
+    //   timeoutBlocks: 300
     // }
     // Useful for private networks
     // private: {
