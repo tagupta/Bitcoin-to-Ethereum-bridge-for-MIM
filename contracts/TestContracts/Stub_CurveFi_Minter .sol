@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-// import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
-// import '@openzeppelin/contracts/utils/Context.sol';
-
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Mintable.sol";
