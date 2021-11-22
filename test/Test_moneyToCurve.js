@@ -97,16 +97,10 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
         let renbtcBefore = await renBtc.balanceOf(accounts[2]);
         let wbtcBefore = await wBtc.balanceOf(accounts[2]);
 
-        console.log("renbtcBefore: " + renbtcBefore);
-        console.log("wbtcBefore: "+ wbtcBefore);
-
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([deposits.renbtc, deposits.wbtc], {from:accounts[2]}));
 
         let renbtcAfter = await renBtc.balanceOf(accounts[2]);
         let wbtcAfter = await wBtc.balanceOf(accounts[2]);
-
-        console.log("renbtcAfter: " + renbtcAfter);
-        console.log("wbtcAfter: "+ wbtcAfter);
 
         assert((renbtcBefore - renbtcAfter).toString() == (deposits.renbtc).toString(),'Unable to deposit RenBTC to curve');
         assert((wbtcBefore - wbtcAfter).toString() == (deposits.wbtc).toString(), 'Unable to deposit wBTC to curve');
@@ -119,9 +113,6 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
       let swapwBTC = await wBtc.balanceOf(curveSwap.address);
       let depositwBTC = deposits.wbtc;
 
-      console.log("swaprenBTC: " + swaprenBTC);
-      console.log("swapwBTC: " + swapwBTC);
-
       assert(swaprenBTC.toString() == depositrenBTC.toString(),'RenBTC not deposited in curve.Fi swap');
       assert(swapwBTC.toString() == depositwBTC.toString(),'wBTC not deposited in curve.Fi swap');
     });
@@ -130,16 +121,11 @@ contract('Integrate Curve.fi into the Defi', async accounts =>{
         let lptokens = deposits.renbtc.add(deposits.wbtc);
         let stakedTokens  = await moneyToCurve.curveLPTokenStaked();
 
-        console.log('stakedTokens: ' + stakedTokens);
-
         assert(lptokens.toString() == stakedTokens.toString(), 'Staking failed');
     });
 
     it('CRV tokens are minted and transfered to the user', async() => {
         let crvBalance = await crvToken.balanceOf(accounts[2]);
-
-        console.log("crvBalance: " + crvBalance);
-
         assert(crvBalance > 0 , 'CRVs not transfered to user');
     });
 
