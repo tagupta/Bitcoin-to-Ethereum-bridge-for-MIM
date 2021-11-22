@@ -88,8 +88,8 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
         else{
            uint256 total;
            for(uint256 i = 0 ; i < N_COINS ; i++){
-                __balances[i] += amounts[i];
-                total += normalize(__coins[i], amounts[i]);
+                __balances[i] = __balances[i].add(amounts[i]);
+                total = total.add(normalize(__coins[i], amounts[i]));
            }
             mint_amount = total;
         }
@@ -104,10 +104,10 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
         for (uint256 i = 0; i < N_COINS; i++) {
             _balances[i] = __balances[i];
             if (deposit)
-                _balances[i] += amounts[i];
+                _balances[i] = _balances[i].add(amounts[i]);
             else
-                _balances[i] -= amounts[i];
-            total += normalize(__coins[i], amounts[i]);
+                _balances[i] = _balances[i].sub(amounts[i]);
+            total = total.add(normalize(__coins[i], amounts[i]));
         }
         return total;
     }
@@ -128,7 +128,7 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
             else
                 new_balances[i] = old_balances[i].sub(amounts[i]);
 
-            total += normalize(__coins[i], amounts[i]);
+            total = total.add(normalize(__coins[i], amounts[i]));
         }
 
         //D1: uint256 = self.get_D_mem(rates, new_balances)
@@ -137,9 +137,9 @@ contract Stub_CurveFi_Swap is ICurveFi_StableSwapRen,Initializable,Context{
             uint256 ideal_balance = old_balances[i].mul(9900).div(10000);//D1 * old_balances[i] / D0;
             uint256 difference;
             if (ideal_balance > new_balances[i])
-                difference = ideal_balance - new_balances[i];
+                difference = ideal_balance.sub(new_balances[i]);
             else
-                difference = new_balances[i] - ideal_balance;
+                difference = new_balances[i].sub(ideal_balance);
 
             uint256 feee = _fee * difference / (10 ** 10);
             new_balances[i] = new_balances[i].sub(feee);

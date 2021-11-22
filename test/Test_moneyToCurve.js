@@ -1,10 +1,8 @@
 const { BN } = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
 
-// const RENBTC = artifacts.require('Stub_RenBTC');
-// const WBTC = artifacts.require('Stub_WBTC');
+
 const RENERC20 = artifacts.require('Stub_RenERC20');
-// const CRVToken = artifacts.require('Stub_CRVToken');
 const ERC20 = artifacts.require('Stub_ERC20');
 
 const CurveSwap = artifacts.require('Stub_CurveFi_Swap');

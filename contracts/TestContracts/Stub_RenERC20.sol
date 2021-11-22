@@ -19,14 +19,6 @@ contract Stub_RenERC20 is IRenERC20, Initializable, Context, ERC20, ERC20Detaile
     uint constant INITIAL_RATE = 1 * EXP_SCALE;
     uint prev_time;
     ERC20Mintable public underlying;
-
-    
-    // constructor() ERC20('RenTokens','renBTC/wBTC'){
-    // }
-    
-    // function mint(address _to, uint _value) external {
-    //    _mint(_to,_value);
-    // }
     
     function initialize(address _underlying,string memory symb, uint8 uDecimals,uint256 _supply) public initializer {
         exchangeRateStored = 10 ** 18;

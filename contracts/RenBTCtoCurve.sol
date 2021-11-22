@@ -99,81 +99,6 @@ contract RenBTCtoCurve is Initializable, Ownable{
     function crvTokenClaim() internal {
         ICurveFi_Minter(curveFi_CRVMinter).mint(curveFi_LPGauge);
     }
-    /************************************************************************************/
-
-    function dummmymultiStepWithdraw_11(uint256[2] memory _amounts)public view returns(uint){
-        address[2] memory stablecoins;
-        uint256 nWithdraw;
-       
-        for(uint256 i = 0 ; i < stablecoins.length ; i++){
-            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
-        }
-        
-        //Step 1 - Calculate amount of Curve LP-tokens to unstake
-        for(uint256 i = 0 ; i < stablecoins.length ; i++){
-            nWithdraw = nWithdraw + (normalize(stablecoins[i], _amounts[i]));
-        }
-
-        return nWithdraw;
-    }
-
-    function dummmymultiStepWithdraw_12(uint nWithdraw)public returns(uint256){
-        uint256 withdrawShares = calculateShares(nWithdraw);
-        return withdrawShares;
-    }
-
-    function dummmymultiStepWithdraw_1112(uint256[2] memory _amounts) public returns(uint256){
-         address[2] memory stablecoins;
-        uint256 nWithdraw;
-       
-        for(uint256 i = 0 ; i < stablecoins.length ; i++){
-            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
-        }
-        
-        //Step 1 - Calculate amount of Curve LP-tokens to unstake
-        for(uint256 i = 0 ; i < stablecoins.length ; i++){
-            nWithdraw = nWithdraw + (normalize(stablecoins[i], _amounts[i]));
-        }
-
-        return calculateShares(nWithdraw);
-    }
-
-    function dummmymultiStepWithdraw_13(uint withdrawShares)public returns(uint256){
-        //Check if you can re-use unstaked LP tokens
-        uint256 notStaked = curveLPTokenUnstaked();
-        if (notStaked > 0) {
-            withdrawShares = withdrawShares.sub(notStaked);
-        }
-        return withdrawShares;
-    }
-    
-    function dummmymultiStepWithdraw_2(uint256 withdrawShares) public{
-        ICurveFi_Gauge(curveFi_LPGauge).withdraw(withdrawShares);
-    }
-
-    function dummmymultiStepWithdraw_3(uint256 withdrawShares)public{
-         IERC20(curveFi_LPToken).safeApprove(curveFi_Swap, withdrawShares);
-    }
-
-    function dummmymultiStepWithdraw_4(uint256[2] memory _amounts, uint256 withdrawShares)public{
-        ICurveFi_StableSwapRen(curveFi_Swap).remove_liquidity_imbalance(_amounts, withdrawShares);
-
-    }
-
-    function dummmymultiStepWithdraw_5(uint256[2] memory _amounts) public{
-        address[2] memory stablecoins;
-        for(uint256 i = 0 ; i < stablecoins.length ; i++){
-            stablecoins[i] = ICurveFi_StableSwapRen(curveFi_Swap).coins(int128(uint128(i)));
-        }
-
-        for (uint256 i = 0; i <  stablecoins.length; i++){
-            IERC20 _stablecoin = IERC20(stablecoins[i]);
-            uint256 balance = _stablecoin.balanceOf(address(this));
-            uint256 amount = (balance <= _amounts[i]) ? balance : _amounts[i]; //Safepoint for rounding
-            _stablecoin.safeTransfer(_msgSender(), amount);
-        }
-    }
-    /************************************************************************************/
 
     function multiStepWithdraw(uint256[2] memory _amounts)public {
         address[2] memory stablecoins;
@@ -296,10 +221,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
            return  amount; 
         }
         else if(decimal > 18){
-           return amount / ((10)**(decimal-18));
+           return amount.div(uint256(10)**(decimal-18));
         } 
         else if(decimal < 18){
-           return amount * ((10)**(18 - decimal));
+           return amount.mul(uint256(10)**(18 - decimal));
         }
     }
 
