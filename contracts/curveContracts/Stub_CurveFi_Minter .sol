@@ -5,7 +5,6 @@ import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Mintable.sol";
 
-//import './Stub_CRVToken.sol';
 import "../curvefi/ICurveFi_Minter.sol";
 import "../curvefi/ICurveFi_Gauge.sol";
 

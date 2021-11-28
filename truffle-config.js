@@ -17,10 +17,10 @@
  * phrase from a file you've .gitignored so it doesn't accidentally become public.
  *
  */
-
+//0xf216661ef7dc6d51b101cb27fefb5f8ff8c83fbeea1da0d5c70268e3eba191a7
  const HDWalletProvider = require('@truffle/hdwallet-provider');
- const privateKey = "0x18efa30c6b1bc2557dc02381956ea1204a780a1a6f2c2bbb4d7f5d9da52d40ad";
- const endpointUrl = "https://kovan.infura.io/v3/42594b3789a646e6ac496235a12f545e";
+ const privateKey = "0xf216661ef7dc6d51b101cb27fefb5f8ff8c83fbeea1da0d5c70268e3eba191a7";
+ const endpointUrl = "wss://kovan.infura.io/ws/v3/42594b3789a646e6ac496235a12f545e";
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
@@ -42,13 +42,13 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    development: {
-     host: "127.0.0.1",     // Localhost (default: none)
-     port: 8545,            // Standard Ethereum port (default: none)
-     network_id: "*",       // Any network (default: none)
-     gas: 999999999,           // Gas sent with each transaction (default: ~6700000) 0x3B9AC9FF
-    //  gasPrice: 20000000000
-    },
+    // development: {
+    //  host: "127.0.0.1",     // Localhost (default: none)
+    //  port: 8545,            // Standard Ethereum port (default: none)
+    //  network_id: "*",       // Any network (default: none)
+    //  gas: 999999999,           // Gas sent with each transaction (default: ~6700000) 0x3B9AC9FF
+    // //  gasPrice: 20000000000
+    // },
     // ganache: {
     //   provider: () => new HDWalletProvider(mnemonicDev, `HTTP://127.0.0.1:7545`),
     //   host: "127.0.0.1",     // Localhost (default: none)
@@ -74,16 +74,17 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-    // kovan: {
-    //   provider: function() {
-    //     return new HDWalletProvider(privateKey,endpointUrl)
-    //   },
-    //   gas: 10000000,
-    //   gasPrice: 25000000000,
-    //   network_id: 42,
-    //   networkCheckTimeout: 100000000,
-    //   timeoutBlocks: 300
-    // }
+    kovan: {
+      provider: function() {
+        return new HDWalletProvider(privateKey,endpointUrl)
+      },
+      gas: 10000000,
+      gasPrice: 50000000000,
+      network_id: 42,
+      networkCheckTimeout: 1000000000,
+      timeoutBlocks: 30000,
+      skipDryRun: true,
+    }
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),

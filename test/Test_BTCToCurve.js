@@ -47,7 +47,6 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     let balanceAfter;
     let renBTCAddress;
   // *************************************************************************
-    let _renBtc;
     let renBtc;
     let wBtc;
     let _wBtc;
@@ -90,10 +89,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
 
 // *************************************************************************
 
-        _renBtc = await ERC20.new({from: accounts[0]});
-        await _renBtc.initialize('renBTC','renBTC',18);
         renBtc = await RENERC20.at(renBTCAddress,{from: accounts[0]});
-        //await renBtc.initialize(_renBtc.address,'ren_wBTC',18);
 
         _wBtc = await ERC20.new({from: accounts[0]});
         await _wBtc.initialize('wBTC','wBTC',18);
@@ -104,7 +100,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         await curveLPToken.initialize();
 
         curveSwap = await CurveSwap.deployed();
-        await curveSwap.initialize([renBtc.address,wBtc.address],curveLPToken.address,10,{from: accounts[0]}); //address[N_COINS] memory _coins, address _pool_token, uint256 _fee
+        await curveSwap.initialize([renBtc.address,wBtc.address],curveLPToken.address,10,{from: accounts[0]});
         await curveLPToken.addMinter(curveSwap.address, {from:accounts[0]});
 
         crvToken = await ERC20.new({from: accounts[0]});
@@ -164,6 +160,9 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         Bitcoin.addUTXO(mint.gatewayAddress, satsAmount.toNumber());
         
         const balanceBefore = await adapter.userBalance(accounts[2]);
+        console.log("balanceBefore from Adapter: "  + balanceBefore);
+        const _balanceBeforeRENBTC = await renBtc.balanceOf(accounts[2]);
+        console.log("_balanceBeforeRENBTC w/o Adapter: "  +_balanceBeforeRENBTC);
 
         await new Promise((resolve, reject) => {
             mint.on("deposit", async deposit => {
@@ -186,6 +185,10 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         });
 
         balanceAfter = await adapter.userBalance(accounts[2]);
+        console.log("balAfter_BTCMint: " + balanceAfter);
+        const _balanceAfterRENBTC = await renBtc.balanceOf(accounts[2]);
+        console.log("_balanceAfterRENBTC w/o Adapter: "  +_balanceAfterRENBTC);
+
         const expected = satsAmount.minus(fixedFee).times(1 - percentFee / 10000).integerValue(BigNumber.ROUND_UP);
         assert((balanceAfter - balanceBefore).toString() == expected.toString(),'Problem with minting of renBTC');
     });
@@ -200,7 +203,9 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         renBTCWithdraw = renbtcBefore;
 
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([balanceAfter,deposits.wbtc], {from:accounts[2]}));
-
+        
+        const _balanceAfterDeposit = await renBtc.balanceOf(accounts[2]);
+        console.log("_balanceAfterDeposit w/o Adapter: "  +_balanceAfterDeposit);
     });
     
     it('Curve.Fi LP-tokens are staked in Gauge', async () =>{
@@ -221,47 +226,55 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
 
     it('Withdraw money from curve.fi', async () =>{
       await moneyToCurve.multiStepWithdraw([balanceAfter,"100000000000"],{from:accounts[2]});
+
+      var _balAfterWithdrawal = await adapter.userBalance(accounts[2]);
+      console.log("_balAfterWithdrawal: " + _balAfterWithdrawal);
+
+      const _balanceAfterRENBTCWithdrawal = await renBtc.balanceOf(accounts[2]);
+      console.log("_balanceAfterRENBTCWithdrawal w/o Adapter: "  +_balanceAfterRENBTCWithdrawal);
+
+
     });
 
-    it('should be able to burn the minted tokens', async () =>{
-      const amount = balanceAfter / 10 ** 8;
-      await renBtc.approve(adapter.address, balanceAfter,{from: accounts[2]})
-      const burnAndRelease = await renJS.burnAndRelease({
-        asset: "BTC",
-        to: Bitcoin.Address(tempBTCadd),
-        from: Ethereum({provider: user.provider, signer: user},network).Contract((btcAddress) => ({
-          sendTo: adapter.address,
-          contractFn: "temporaryBurn",
-          contractParams: [
-          {
-            type: "bytes",
-            name: "_msg",
-            value: Buffer.from(`Withdrawing ${amount} BTC`),
-          },
-          {
-            type: "bytes",
-            name: "_to",
-            value: btcAddress,
-          },
-          {
-            type: "uint256",
-            name: "_amount",
-            value: renJS.utils.toSmallestUnit(amount, 8),
-          },
-          {
-            type: 'address',
-            name: 'from',
-            value: accounts[2]
-          }
-          ],
-        }))
+    // it('should be able to burn the minted tokens', async () =>{
+    //   const amount = balanceAfter / 10 ** 8;
+    //   await renBtc.approve(adapter.address, balanceAfter,{from: accounts[2]})
+    //   const burnAndRelease = await renJS.burnAndRelease({
+    //     asset: "BTC",
+    //     to: Bitcoin.Address(tempBTCadd),
+    //     from: Ethereum({provider: user.provider, signer: user},network).Contract((btcAddress) => ({
+    //       sendTo: adapter.address,
+    //       contractFn: "temporaryBurn",
+    //       contractParams: [
+    //       {
+    //         type: "bytes",
+    //         name: "_msg",
+    //         value: Buffer.from(`Withdrawing ${amount} BTC`),
+    //       },
+    //       {
+    //         type: "bytes",
+    //         name: "_to",
+    //         value: btcAddress,
+    //       },
+    //       {
+    //         type: "uint256",
+    //         name: "_amount",
+    //         value: renJS.utils.toSmallestUnit(amount, 8),
+    //       },
+    //       {
+    //         type: 'address',
+    //         name: 'from',
+    //         value: accounts[2]
+    //       }
+    //       ],
+    //     }))
 
-       });
+    //    });
        
-       await burnAndRelease.burn();
-       await burnAndRelease.release();
+    //    await burnAndRelease.burn();
+    //    await burnAndRelease.release();
       
-    });
+    // });
 
 
 

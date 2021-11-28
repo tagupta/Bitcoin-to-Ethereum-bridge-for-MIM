@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol
 
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
+//import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import './curvefi/ICurveFi_StableSwapRen.sol';
@@ -17,7 +17,7 @@ import './curvefi/IRenERC20.sol';
 
 contract RenBTCtoCurve is Initializable, Ownable{
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    //using SafeERC20 for IERC20;
 
     address public curveFi_Swap;
     address public curveFi_LPToken;
@@ -66,8 +66,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
         }
         
         for (uint256 i = 0; i < stablecoins.length; i++) {
-            IERC20(stablecoins[i]).safeTransferFrom(_msgSender(), address(this), _amounts[i]);
-            IERC20(stablecoins[i]).safeApprove(curveFi_Swap, _amounts[i]);
+            //IERC20(stablecoins[i]).safeTransferFrom(_msgSender(), address(this), _amounts[i]);
+            //IERC20(stablecoins[i]).safeApprove(curveFi_Swap, _amounts[i]);
+            IRenERC20(stablecoins[i]).transferFrom(_msgSender(), address(this), _amounts[i]);
+            IRenERC20(stablecoins[i]).approve(curveFi_Swap, _amounts[i]);
         }
 
         //Step 1 - deposit stablecoins and get Curve.Fi LP tokens
@@ -76,13 +78,13 @@ contract RenBTCtoCurve is Initializable, Ownable{
         //Step 2 - stake Curve LP tokens into Gauge and get CRV rewards
         uint256 curveLPBalance = IERC20(curveFi_LPToken).balanceOf(address(this));
 
-        IERC20(curveFi_LPToken).safeApprove(curveFi_LPGauge, curveLPBalance);
+        IERC20(curveFi_LPToken).approve(curveFi_LPGauge, curveLPBalance);
         ICurveFi_Gauge(curveFi_LPGauge).deposit(curveLPBalance);
 
         //Step 3 - get all the rewards (and make whatever you need with them)
         crvTokenClaim();
         uint256 crvAmount = IERC20(curveFi_CRVToken).balanceOf(address(this));
-        IERC20(curveFi_CRVToken).safeTransfer(_msgSender(), crvAmount);
+        IERC20(curveFi_CRVToken).transfer(_msgSender(), crvAmount);
 
     }
 
@@ -118,15 +120,15 @@ contract RenBTCtoCurve is Initializable, Ownable{
         ICurveFi_Gauge(curveFi_LPGauge).withdraw(withdrawShares);
 
         //Step 3 - Withdraw stablecoins from CurveSwap
-        IERC20(curveFi_LPToken).safeApprove(curveFi_Swap, withdrawShares);
+        IERC20(curveFi_LPToken).approve(curveFi_Swap, withdrawShares);
         ICurveFi_StableSwapRen(curveFi_Swap).remove_liquidity_imbalance(_amounts, withdrawShares);
 
         //Step 4 - Send stablecoins to the requestor
         for (uint256 i = 0; i <  stablecoins.length; i++){
-            IERC20 _stablecoin = IERC20(stablecoins[i]);
+            IRenERC20 _stablecoin = IRenERC20(stablecoins[i]);
             uint256 balance = _stablecoin.balanceOf(address(this));
             uint256 amount = (balance <= _amounts[i]) ? balance : _amounts[i]; //Safepoint for rounding
-            _stablecoin.safeTransfer(_msgSender(), amount);
+            _stablecoin.transfer(_msgSender(), amount);
         }
     }
 
