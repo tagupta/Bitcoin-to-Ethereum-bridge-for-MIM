@@ -30,7 +30,7 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
     mapping (uint256 => uint) public integrate_inv_supply;
     mapping(address => uint) public integrate_inv_supply_of;
     mapping(address => uint) public integrate_checkpoint_of;
-    
+    mapping(address => mapping(address => bool)) public approved_to_deposit;
     mapping(address => uint) public working_balances;
     uint public working_supply; 
 
@@ -96,6 +96,24 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
         
     }
 
+    function deposit(uint256 _value, address addr) public{
+        if(addr != _msgSender()){
+            require(approved_to_deposit[_msgSender()][addr], "Not approved to deposit for other address");
+        }
+         _checkpoint(addr);
+
+         if(_value != 0){
+             uint256 _balance = balanceOf[addr].add(_value);
+             uint256 _supply = totalSupply.add(_value);
+             balanceOf[addr] = _balance;
+             totalSupply = _supply;
+
+             _update_liquidity_limit(addr, _balance, _supply);
+
+             IERC20(__lp_token).transferFrom(_msgSender(), address(this), _value);
+         }
+    }
+
     function withdraw(uint _value)public {
         _checkpoint(_msgSender());
         balanceOf[_msgSender()] = balanceOf[_msgSender()].sub(_value);
@@ -125,6 +143,10 @@ contract Stub_CurveFi_Gauge is ICurveFi_Gauge, Initializable, Context{
 
     function integrate_fraction(address _for) public view returns(uint256) {
         return __integrate_fraction[_for];
+    }
+
+    function set_approve_deposit(address addr,bool can_deposit)public{
+        approved_to_deposit[addr][_msgSender()] = can_deposit;
     }
 
 }

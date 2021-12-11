@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
@@ -14,16 +15,26 @@ import './curvefi/ICurveFi_StableSwapRen.sol';
 import './curvefi/ICurveFi_Gauge.sol';
 import './curvefi/ICurveFi_Minter.sol';
 import './curvefi/IRenERC20.sol';
+import './Decimal.sol';
 
 contract RenBTCtoCurve is Initializable, Ownable{
     using SafeMath for uint256;
+    using Decimal for Decimal.D256;
     //using SafeERC20 for IERC20;
-
     address public curveFi_Swap;
     address public curveFi_LPToken;
     address public curveFi_LPGauge;
     address public curveFi_CRVMinter;
     address public curveFi_CRVToken; 
+    
+    struct BlockDeposit{
+        uint blockNumber;
+        uint depositBalance;
+    }
+
+    BlockDeposit[] public _deposits;
+    mapping(address => uint[]) public depsoitIndex;
+    mapping(address => mapping(uint  => bool)) public userdeposits;
 
     function initialize() external initializer {
         Ownable.initialize(_msgSender());
@@ -41,7 +52,6 @@ contract RenBTCtoCurve is Initializable, Ownable{
                         address _minterContract, 
                         address _lpContract ) 
                         external onlyOwner {
-
         require(_swapContract != address(0), "Incorrect StableSwap contract address");
 
         curveFi_Swap = _swapContract;
@@ -79,20 +89,33 @@ contract RenBTCtoCurve is Initializable, Ownable{
         uint256 curveLPBalance = IERC20(curveFi_LPToken).balanceOf(address(this));
 
         IERC20(curveFi_LPToken).approve(curveFi_LPGauge, curveLPBalance);
+
         ICurveFi_Gauge(curveFi_LPGauge).deposit(curveLPBalance);
 
         //Step 3 - get all the rewards (and make whatever you need with them)
         crvTokenClaim();
-        uint256 crvAmount = IERC20(curveFi_CRVToken).balanceOf(address(this));
-        IERC20(curveFi_CRVToken).transfer(_msgSender(), crvAmount);
+      
+       
+       uint256 summ;
+        for (uint256 i=0; i < stablecoins.length; i++){
+            summ = summ.add(normalize(stablecoins[i], _amounts[i]));
+        }
+        _deposits.push(BlockDeposit(block.number,summ));
+        depsoitIndex[msg.sender].push(_deposits.length-1);
+        userdeposits[msg.sender][_deposits.length-1] = true;
 
     }
 
      /**
      * @notice Claim CRV reward
      */
-    function crvTokenClaim() internal {
+    function crvTokenClaim() public{
         ICurveFi_Minter(curveFi_CRVMinter).mint(curveFi_LPGauge);
+        
+    }
+
+    function getClaimableTokens() public returns(uint256){
+       return ICurveFi_Gauge(curveFi_LPGauge).claimable_tokens(address(this));
     }
 
     function multiStepWithdraw(uint256[2] memory _amounts)public {
@@ -130,8 +153,65 @@ contract RenBTCtoCurve is Initializable, Ownable{
             uint256 amount = (balance <= _amounts[i]) ? balance : _amounts[i]; //Safepoint for rounding
             _stablecoin.transfer(_msgSender(), amount);
         }
+
+        crvTokenClaim();
+        
+        uint256 summ;
+        for (uint256 i=0; i < stablecoins.length; i++){
+            summ = summ.add(normalize(stablecoins[i], _amounts[i]));
+        }
+
+        uint256 noOfDeposits = depsoitIndex[_msgSender()].length;
+        if(noOfDeposits > 0){
+
+            while(summ > 0){
+              uint256 [] storage userArray = depsoitIndex[_msgSender()];
+              uint256 __deposit = _deposits[userArray[userArray.length-1]].depositBalance;
+              if(__deposit > summ){
+                  __deposit = __deposit.sub(summ);
+                  summ = 0;
+                  _deposits[userArray[userArray.length-1]].depositBalance = __deposit;
+              }
+              else if(__deposit <=  summ){
+                  summ  = summ.sub(__deposit);
+                  __deposit = 0;
+                  _deposits[userArray[userArray.length-1]].depositBalance = __deposit;
+                  userdeposits[_msgSender()][userArray[userArray.length-1]] = false;
+                  userArray.pop();
+              }
+              
+            }
+        }
     }
 
+    function fetchCRVShare() public view returns(Decimal.D256 memory, uint256){
+
+        uint256 crvAmount = IERC20(curveFi_CRVToken).balanceOf(address(this));
+        uint256 latestBlock = block.number;
+        uint256 [] memory userArray = depsoitIndex[_msgSender()];
+        uint256 numerator = 0;
+        uint256 denominator = 0;
+        for(uint i = 0; i < userArray.length ; i++){
+           BlockDeposit memory _depositDetails = _deposits[userArray[i]];
+           numerator += (latestBlock - _depositDetails.blockNumber)*_depositDetails.depositBalance;
+        }
+        
+        for(uint i = 0 ; i < _deposits.length ; i++){
+            if(userdeposits[_msgSender()][i] != true){
+               denominator += (latestBlock - _deposits[i].blockNumber) * _deposits[i].depositBalance;
+            }
+        }
+
+        return (Decimal.from(numerator).div(numerator + denominator), crvAmount);
+    }
+
+    function claimCRV() public{
+        (Decimal.D256 memory result,uint256 crv) = fetchCRVShare();
+        uint256 crvshare = Decimal.asUint256(result.mul(crv));
+        IERC20(curveFi_CRVToken).transfer(_msgSender(), crvshare);
+       
+    }
+    
     function calculateShares(uint256 normalizedWithdraw)public view returns(uint256){
         uint256 nBalance = normalizedBalance();
         uint256 poolShares = curveLPTokenBalance();
@@ -204,6 +284,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
      */
     function curveLPTokenStaked() public view returns(uint256) {
         return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(address(this));
+       // return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(_msgSender());
     }
 
     /**

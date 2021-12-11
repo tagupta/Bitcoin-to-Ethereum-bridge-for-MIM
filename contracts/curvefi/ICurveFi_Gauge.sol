@@ -7,11 +7,12 @@ interface ICurveFi_Gauge{
     function crv_token() external view returns(address);
  
     function balanceOf(address arg0) external view returns (uint256);
-
-    // function deposit(uint256 _value, address addr) external;
+    function approved_to_deposit(address arg0, address arg1) external view returns(bool);
+    function deposit(uint256 _value, address addr) external;
     function deposit(uint256 _value) external;
 
     function withdraw(uint256 _value) external;
+    function set_approve_deposit(address addr,bool can_deposit)external;
 
     function claimable_tokens(address addr) external returns (uint256);
     function minter() external view returns(address); //use minter().mint(gauge_addr) to claim CRV
