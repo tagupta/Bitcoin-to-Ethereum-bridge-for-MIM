@@ -19,7 +19,7 @@
  */
 //0xf216661ef7dc6d51b101cb27fefb5f8ff8c83fbeea1da0d5c70268e3eba191a7
  const HDWalletProvider = require('@truffle/hdwallet-provider');
- const privateKey = "0xf216661ef7dc6d51b101cb27fefb5f8ff8c83fbeea1da0d5c70268e3eba191a7";
+ const privateKey = "0x35732fa1d7b5b8edf6f6921afcd85bd1997f5ec4a8ca6fbbcb74b04a78ce0939";
  const endpointUrl = "https://kovan.infura.io/v3/42594b3789a646e6ac496235a12f545e";
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
@@ -74,18 +74,18 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-    // kovan: {
-    //   provider: function() {
-    //     return new HDWalletProvider(privateKey,endpointUrl)
-    //   },
-    //   gas: 6721975,
-    //   gasPrice: 120000000000,
-    //   network_id: 42,
-    //   networkCheckTimeout: 1000000000,
-    //   timeoutBlocks: 3000,
-    //   skipDryRun: true,
-    //   confirmations: 2,
-    // }
+    kovan: {
+      provider: function() {
+        return new HDWalletProvider(privateKey,endpointUrl)
+      },
+      gas: 6721975,
+      gasPrice: 120000000000,
+      network_id: 42,
+      networkCheckTimeout: 1000000000,
+      timeoutBlocks: 3000,
+      skipDryRun: true,
+      //confirmations: 2,
+    }
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),

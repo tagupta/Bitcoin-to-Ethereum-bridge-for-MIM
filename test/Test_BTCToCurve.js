@@ -26,13 +26,11 @@ const CurveGauge = artifacts.require('Stub_CurveFi_Gauge');
 const MoneyToCurve = artifacts.require('RenBTCtoCurve');
 
 const supplies = {
-    renbtc : new BN('1000000000000000000000000'),
-    wbtc : new BN('1000000000000000000000000') //1000000000000
+    wbtc : new BN('0'),
 };
 
 const deposits  = {
-    renbtc: new BN('100000000000000000000'), 
-    wbtc:  new BN('0'), //200000000
+    wbtc:  new BN('0'), 
 }
 
 contract('Witnessing the transition of BTC to CRV Token', async accounts => {
@@ -201,7 +199,9 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         await wBtc.approve(moneyToCurve.address,deposits.wbtc, {from:accounts[2]});
 
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([renBTC_userA,deposits.wbtc], {from:accounts[2]}));
-    });
+        var renBTCBalance = await  moneyToCurve.rbtcDeposits(accounts[2]);
+        console.log("renBTCBalance after minting: "+ renBTCBalance);  
+      });
     
     it('Curve.Fi LP-tokens of User 1 are staked in Gauge', async () =>{
       let swaprenBTC = await renBtc.balanceOf(curveSwap.address);
@@ -307,7 +307,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         console.log("result: " + result);
         console.log("crvAmount: " + crvAmount);
 
-        var _userShare = (result/ 10 ** 18) * crvAmount;
+        var _userShare = parseFloat(result * crvAmount);
 
         console.log("userShare of CRV: " + _userShare);
     });
@@ -323,6 +323,8 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     it('Withdraw money from curve.fi by user 1', async () =>{
       //var balance = totalDepositsA / 2;
       await moneyToCurve.multiStepWithdraw([renBTC_userA,0],{from:accounts[2]});
+      var renBTCBalance = await  moneyToCurve.rbtcDeposits(accounts[2]);
+        console.log("renBTCBalance after withdraw: "+ renBTCBalance);  
       var _balAfterWithdrawal = await adapter.userBalance(accounts[2]);
       console.log("After withdrawal by user 1: " + _balAfterWithdrawal);
 

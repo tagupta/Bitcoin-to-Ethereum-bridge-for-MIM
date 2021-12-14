@@ -35,6 +35,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
     BlockDeposit[] public _deposits;
     mapping(address => uint[]) public depsoitIndex;
     mapping(address => mapping(uint  => bool)) public userdeposits;
+    mapping(address => uint256) public rbtcDeposits;
 
     function initialize() external initializer {
         Ownable.initialize(_msgSender());
@@ -103,7 +104,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
         _deposits.push(BlockDeposit(block.number,summ));
         depsoitIndex[msg.sender].push(_deposits.length-1);
         userdeposits[msg.sender][_deposits.length-1] = true;
-
+        rbtcDeposits[msg.sender] += _amounts[0];
     }
 
      /**
@@ -182,6 +183,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
               
             }
         }
+        
+        rbtcDeposits[msg.sender] -= _amounts[0];
     }
 
     function fetchCRVShare() public view returns(Decimal.D256 memory, uint256){
