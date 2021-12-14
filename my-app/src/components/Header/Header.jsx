@@ -1,8 +1,10 @@
 import React, { Component } from 'react'
 import styled from 'styled-components';
+import CoffeeMakerOutlinedIcon from '@mui/icons-material/CoffeeMakerOutlined';
+import './Header.css';
 
 const AppHeader = styled.header`
-    min-height: 20vh;
+    min-height: 16vh;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -11,16 +13,14 @@ const AppHeader = styled.header`
     font-family: monospace;
 `;
 
-const H1 = styled.h1`
-font-size: 36px;
-`;
 export default class Header extends Component {
     render() {
         return (
             <AppHeader>
-            <H1>
-                Defi Journey from BTC to CRV
-            </H1>
+            <div style={{display: "contents"}}>
+                <CoffeeMakerOutlinedIcon sx={{ fontSize: 40 }}/>   
+                <h3><strong>Brew BTC to get CRV</strong></h3>              
+            </div>
             </AppHeader>
         )
     }
