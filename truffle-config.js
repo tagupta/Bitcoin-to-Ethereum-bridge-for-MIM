@@ -74,18 +74,18 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-    kovan: {
-      provider: function() {
-        return new HDWalletProvider(privateKey,endpointUrl)
-      },
-      gas: 6721975,
-      gasPrice: 120000000000,
-      network_id: 42,
-      networkCheckTimeout: 1000000000,
-      timeoutBlocks: 3000,
-      skipDryRun: true,
-      //confirmations: 2,
-    }
+    // kovan: {
+    //   provider: function() {
+    //     return new HDWalletProvider(privateKey,endpointUrl)
+    //   },
+    //   gas: 6721975,
+    //   gasPrice: 120000000000,
+    //   network_id: 42,
+    //   networkCheckTimeout: 1000000000,
+    //   timeoutBlocks: 3000,
+    //   skipDryRun: true,
+    //   //confirmations: 2,
+    // }
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),

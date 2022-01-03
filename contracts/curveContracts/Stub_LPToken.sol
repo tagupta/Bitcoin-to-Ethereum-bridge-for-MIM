@@ -14,7 +14,7 @@ contract Stub_LPToken is Initializable, Context, ERC20, ERC20Detailed, ERC20Mint
 
     function initialize() public initializer {
         ERC20Mintable.initialize(_msgSender());
-        ERC20Detailed.initialize("Curve.fi renBTC/wBTC", "renDAI+wBTC", 18);
+        ERC20Detailed.initialize("renCRV", "rencrv", 18);
     }
 
     // function mint(address _to, uint _value) external {

@@ -17,6 +17,11 @@ import './curvefi/ICurveFi_Minter.sol';
 import './curvefi/IRenERC20.sol';
 import './Decimal.sol';
 
+interface IDeposit{
+   function deposit(uint256 _pid, uint256 _amount, bool _stake) external returns(bool);
+   function withdraw(uint256 _pid, uint256 _amount) external returns(bool);
+}
+
 contract RenBTCtoCurve is Initializable, Ownable{
     using SafeMath for uint256;
     using Decimal for Decimal.D256;
@@ -25,7 +30,9 @@ contract RenBTCtoCurve is Initializable, Ownable{
     address public curveFi_LPToken;
     address public curveFi_LPGauge;
     address public curveFi_CRVMinter;
-    address public curveFi_CRVToken; 
+    address public curveFi_CRVToken;
+    address public convexFi_Booster;
+    address public convexFi_Staker;
     
     struct BlockDeposit{
         uint blockNumber;
@@ -51,7 +58,9 @@ contract RenBTCtoCurve is Initializable, Ownable{
         function setup( address _swapContract, 
                         address _gaugeContract, 
                         address _minterContract, 
-                        address _lpContract ) 
+                        address _lpContract,
+                        address _booster,
+                        address _staker) 
                         external onlyOwner {
         require(_swapContract != address(0), "Incorrect StableSwap contract address");
 
@@ -63,6 +72,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
 
         curveFi_CRVMinter = _minterContract;
         curveFi_CRVToken = ICurveFi_Gauge(curveFi_LPGauge).crv_token();
+        convexFi_Booster = _booster;
+        convexFi_Staker = _staker;
     }
 
      /**
@@ -89,9 +100,11 @@ contract RenBTCtoCurve is Initializable, Ownable{
         //Step 2 - stake Curve LP tokens into Gauge and get CRV rewards
         uint256 curveLPBalance = IERC20(curveFi_LPToken).balanceOf(address(this));
 
-        IERC20(curveFi_LPToken).approve(curveFi_LPGauge, curveLPBalance);
+        // IERC20(curveFi_LPToken).approve(curveFi_LPGauge, curveLPBalance);
+        // ICurveFi_Gauge(curveFi_LPGauge).deposit(curveLPBalance);
 
-        ICurveFi_Gauge(curveFi_LPGauge).deposit(curveLPBalance);
+        IERC20(curveFi_LPToken).approve(convexFi_Booster, curveLPBalance);
+        IDeposit(convexFi_Booster).deposit(0, curveLPBalance, false);   
 
         //Step 3 - get all the rewards (and make whatever you need with them)
         crvTokenClaim();
@@ -141,7 +154,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
         }
 
         //Step 2 - Unstake Curve LP tokens from Gauge
-        ICurveFi_Gauge(curveFi_LPGauge).withdraw(withdrawShares);
+        //ICurveFi_Gauge(curveFi_LPGauge).withdraw(withdrawShares);
+        IDeposit(convexFi_Booster).withdraw(0, withdrawShares);
 
         //Step 3 - Withdraw stablecoins from CurveSwap
         IERC20(curveFi_LPToken).approve(curveFi_Swap, withdrawShares);
@@ -235,7 +249,6 @@ contract RenBTCtoCurve is Initializable, Ownable{
         for (uint256 i=0; i < stablecoins.length; i++){
             summ = summ.add(normalize(stablecoins[i], balances[i]));
         }
-
         return summ;
     } 
 
@@ -286,7 +299,7 @@ contract RenBTCtoCurve is Initializable, Ownable{
      * @notice Get amount of CurveFi LP tokens staked in the Gauge
      */
     function curveLPTokenStaked() public view returns(uint256) {
-        return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(address(this));
+        return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(convexFi_Staker);
        // return ICurveFi_Gauge(curveFi_LPGauge).balanceOf(_msgSender());
     }
 

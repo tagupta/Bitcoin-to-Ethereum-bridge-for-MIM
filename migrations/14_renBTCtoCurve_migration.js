@@ -1,5 +1,5 @@
 const MoneytoCurve = artifacts.require("RenBTCtoCurve");
 
-module.exports = function (deployer, network, accounts) {
+module.exports = function (deployer) {
   deployer.deploy(MoneytoCurve);
 };

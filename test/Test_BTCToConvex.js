@@ -13,17 +13,19 @@ const Adapter = artifacts.require('Basic');
 const GatewayFactory = artifacts.require('Stub_GatewayFactory');
 const BasicAdapter = artifacts.require('Stub_BasicAdapter');
 
-// *************************************************************************
-
 const RENERC20 = artifacts.require('Stub_RenERC20');
 const ERC20 = artifacts.require('Stub_ERC20');
-
 const CurveSwap = artifacts.require('Stub_CurveFi_Swap');
 const CurveLPToken = artifacts.require('Stub_LPToken');
 const CurveCRVMinter = artifacts.require('Stub_CurveFi_Minter');
 const CurveGauge = artifacts.require('Stub_CurveFi_Gauge');
-
 const MoneyToCurve = artifacts.require('RenBTCtoCurve');
+
+const Registry = artifacts.require('Stub_addressProvider');
+const MainRegistry = artifacts.require('Stub_registry');
+const TokenFactory = artifacts.require('Stub_TokenFactory');
+const VoterProxy = artifacts.require('Stub_CurveVoterProxy');
+const Booster = artifacts.require('Stub_Booster');
 
 const supplies = {
     wbtc : new BN('0'),
@@ -33,7 +35,7 @@ const deposits  = {
     wbtc:  new BN('0'), 
 }
 
-contract('Witnessing the transition of BTC to CRV Token', async accounts => {
+contract('Witnessing the transition of btc to cvxrencrv and vice versa', async accounts => {
     let adapter;
     let gatewayFactory;
     let gatewayRegistryAddress;
@@ -42,11 +44,10 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     let renJS;
     let network;
     let user;
+
     let renBTC_userA;
-    let totalDepositsA = 0;
     let renBTC_userB;
     let renBTCAddress;
-  // *************************************************************************
     let renBtc;
     let wBtc;
     let _wBtc;
@@ -56,6 +57,13 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
     let curveMinter;
     let curveGauge;
     let moneyToCurve;
+
+    let registry;
+    let mainRegistry;
+    let tokenFactory;
+    let voterProxy;
+    let booster;
+
     const tempBTCadd = '183Y3PKMjkmH4vLTzZwpkVAxp45RTuz9rZ';
 
     before(async () =>{
@@ -89,10 +97,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         const provider = await ethers.getDefaultProvider('http://localhost:8545');
         user = await provider.getSigner();
 
-// *************************************************************************
-
         renBtc = await RENERC20.at(renBTCAddress,{from: accounts[0]});
-
         _wBtc = await ERC20.new({from: accounts[0]});
         await _wBtc.initialize('wBTC','wBTC',18);
         wBtc = await RENERC20.new({from: accounts[0]});
@@ -115,11 +120,47 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         curveGauge = await CurveGauge.deployed();
         await curveGauge.initialize(curveLPToken.address, curveMinter.address,{from: accounts[0]});
         await crvToken.addMinter(curveGauge.address, {from: accounts[0]});
+        
+        booster = await Booster.deployed();
+
+        registry = await Registry.deployed();
+        await registry.initialize(accounts[0]);
+
+        mainRegistry = await MainRegistry.deployed();
+        await mainRegistry.initialize(registry.address);
+        await mainRegistry.add_pool(curveSwap.address,2,curveLPToken.address,web3.utils.fromUtf8("Rate"),8,8,true,true,'ren');
+        await mainRegistry.set_liquidity_gauges(curveSwap.address,[curveGauge.address,
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000',
+                                                                  '0x0000000000000000000000000000000000000000']);
+        await registry.set_address(0,mainRegistry.address);
+
+        tokenFactory = await TokenFactory.deployed();
+        await tokenFactory.initialize(booster.address);
+
+        voterProxy = await VoterProxy.deployed();
+        await voterProxy.initialize();
+        await voterProxy.setOperator(booster.address);
+        
+        await booster.initialize(voterProxy.address, registry.address); 
+        await booster.setFactories(tokenFactory.address);
+        await booster.addPool(curveSwap.address, curveGauge.address, 1);
 
         //Main contract
         moneyToCurve = await MoneyToCurve.deployed();
         await moneyToCurve.initialize({from:accounts[1]});
-        await moneyToCurve.setup(curveSwap.address, curveGauge.address, curveMinter.address,curveLPToken.address, {from:accounts[1]});
+        await moneyToCurve.setup(curveSwap.address, 
+                                 curveGauge.address, 
+                                 curveMinter.address,
+                                 curveLPToken.address,
+                                 booster.address,
+                                 voterProxy.address, {from:accounts[1]});
 
         //preliminary balances 1000000000
         await wBtc.transfer(accounts[2], deposits.wbtc, {from: accounts[0]});
@@ -163,8 +204,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         Bitcoin.addUTXO(mint.gatewayAddress, satsAmount.toNumber());
         
         const balanceBefore = await adapter.userBalance(accounts[2]);
-        console.log("renBTC of user 1 before minting: "  + balanceBefore);
-
+    
         await new Promise((resolve, reject) => {
             mint.on("deposit", async deposit => {
               try {
@@ -186,9 +226,6 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         });
 
         renBTC_userA = await adapter.userBalance(accounts[2]);
-        totalDepositsA += renBTC_userA.toNumber();
-        console.log("RenBTC of user 1 after 1st minting: " + renBTC_userA);
-
         const expected = satsAmount.minus(fixedFee).times(1 - percentFee / 10000).integerValue(BigNumber.ROUND_UP);
         assert((renBTC_userA - balanceBefore).toString() == expected.toString(),'Problem with minting of renBTC');
     });
@@ -197,10 +234,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
 
         await renBtc.approve(moneyToCurve.address, renBTC_userA, {from: accounts[2]});
         await wBtc.approve(moneyToCurve.address,deposits.wbtc, {from:accounts[2]});
-
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([renBTC_userA,deposits.wbtc], {from:accounts[2]}));
-        var renBTCBalance = await  moneyToCurve.rbtcDeposits(accounts[2]);
-        console.log("renBTCBalance after minting: "+ renBTCBalance);  
       });
     
     it('Curve.Fi LP-tokens of User 1 are staked in Gauge', async () =>{
@@ -209,15 +243,7 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
 
       let lptokens = (swaprenBTC.toNumber() * 10000000000) + swapwBTC.toNumber();
       let stakedTokens  = await moneyToCurve.curveLPTokenStaked();
-
       assert(lptokens.toString() == stakedTokens.toString(),'CurveFi: problem with the staking');
-    });
-
-    it('CRV tokens are minted', async() => {
-      await moneyToCurve.crvTokenClaim();
-      let crvBalance = await crvToken.balanceOf(moneyToCurve.address);
-      console.log("crvBalance: "+ crvBalance);
-      assert(crvBalance > 0 , 'CRVs not minted');
     });
     
     it('Checking the minting of renBTC from BTC for User 2', async () => {
@@ -227,7 +253,6 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
 
         // Shift the amount by the asset's decimals (8 for BTC).
         const satsAmount = new BigNumber(btcAmount).times(new BigNumber(10).exponentiatedBy(decimals));
-
         const fixedFee = 1000; // sats
         const percentFee = 15; // BIPS
 
@@ -256,7 +281,6 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         Bitcoin.addUTXO(mint.gatewayAddress, satsAmount.toNumber());
         
         const balanceBefore = await adapter.userBalance(accounts[3]);
-        console.log("renBTC balance of user 2 before minting: "  + balanceBefore);
 
         await new Promise((resolve, reject) => {
             mint.on("deposit", async deposit => {
@@ -279,58 +303,21 @@ contract('Witnessing the transition of BTC to CRV Token', async accounts => {
         });
 
         renBTC_userB = await adapter.userBalance(accounts[3]);
-         
-        console.log("RenBTC of user 2 after 1st minting: " + renBTC_userB);
-
         const expected = satsAmount.minus(fixedFee).times(1 - percentFee / 10000).integerValue(BigNumber.ROUND_UP);
         assert((renBTC_userB - balanceBefore).toString() == expected.toString(),'Problem with minting of renBTC');
     });
 
     it('Deposit the money into Defi for User 2', async () =>{
-
         await renBtc.approve(moneyToCurve.address, renBTC_userB, {from: accounts[3]});
         await wBtc.approve(moneyToCurve.address,deposits.wbtc, {from:accounts[3]});
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([renBTC_userB,deposits.wbtc], {from:accounts[3]}));
     });
-    
-    it('CRV tokens are minted', async() => {
-        await moneyToCurve.crvTokenClaim();
-        let crvBalance = await crvToken.balanceOf(moneyToCurve.address);
-        console.log("crvBalance: "+ crvBalance);
-        assert(crvBalance > 0 , 'CRVs not minted');
-    });
-
-    it('fetching user 1 share of CRVs',async ()=>{
-        await moneyToCurve.crvTokenClaim();
-        var x = await moneyToCurve.fetchCRVShare({from: accounts[2]});
-        const {0: result, 1: crvAmount} = x;
-        console.log("result: " + result);
-        console.log("crvAmount: " + crvAmount);
-
-        var _userShare = parseFloat(result * crvAmount);
-
-        console.log("userShare of CRV: " + _userShare);
-    });
-
-    it('Tranferring CRvs to user1',async()=>{
-      var crvBefore = await crvToken.balanceOf(accounts[2]);
-      await moneyToCurve.claimCRV({from:accounts[2]});
-      var crvAfter = await crvToken.balanceOf(accounts[2]);
-      console.log("User 1 crvBefore: "+ crvBefore);
-      console.log("User 1 crvAfter: "+ crvAfter);
-    });
 
     it('Withdraw money from curve.fi by user 1', async () =>{
-      //var balance = totalDepositsA / 2;
-      await moneyToCurve.multiStepWithdraw([renBTC_userA,0],{from:accounts[2]});
-      var renBTCBalance = await  moneyToCurve.rbtcDeposits(accounts[2]);
-        console.log("renBTCBalance after withdraw: "+ renBTCBalance);  
-      var _balAfterWithdrawal = await adapter.userBalance(accounts[2]);
-      console.log("After withdrawal by user 1: " + _balAfterWithdrawal);
-
+      await truffleAssert.passes(moneyToCurve.multiStepWithdraw([renBTC_userA,0],{from:accounts[2]}));
     });
 
-    it('should be able to burn the minted tokens', async () =>{
+    it('should be able to burn the minted tokens for user 1', async () =>{
       const amount = renBTC_userA / 10 ** 8;
       await renBtc.approve(adapter.address, renBTC_userA,{from: accounts[2]})
       const burnAndRelease = await renJS.burnAndRelease({
