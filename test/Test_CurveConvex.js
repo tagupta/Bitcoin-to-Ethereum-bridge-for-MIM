@@ -167,7 +167,7 @@ contract('Integrate curve and convex into the Defi', async accounts =>{
         await truffleAssert.passes(moneyToCurve.multiStepDeposit([deposits.renbtc,0], {from:accounts[2]}));
     });
 
-    it('Withdraw money from curve.fi by user 1', async () =>{
+    it('Withdraw money by user 1', async () =>{
        await truffleAssert.passes(moneyToCurve.multiStepWithdraw([deposits.renbtc,0],{from:accounts[2]}));
     });
 })

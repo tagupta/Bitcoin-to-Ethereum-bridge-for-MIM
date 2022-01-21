@@ -143,7 +143,7 @@ contract Stub_Booster is Initializable{
         sendTokensToGauge(_pid);
 
         address token = poolInfo[_pid].token;
-        uint256 balance;
+        //uint256 balance;
         if(_stake){
             //mint here and send to rewards on user behalf
             ITokenMinter(token).mint(address(this),_amount);

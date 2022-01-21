@@ -8,24 +8,31 @@ import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol
 
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
-//import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import './curvefi/ICurveFi_StableSwapRen.sol';
 import './curvefi/ICurveFi_Gauge.sol';
 import './curvefi/ICurveFi_Minter.sol';
 import './curvefi/IRenERC20.sol';
+import './InterfacesAbracadabra/IMasterContract.sol';
 import './Decimal.sol';
 
 interface IDeposit{
+    struct PoolInfo {
+        address lptoken;
+        address token;
+        address gauge;
+        address crvRewards;
+        address stash;
+    }
    function deposit(uint256 _pid, uint256 _amount, bool _stake) external returns(bool);
    function withdraw(uint256 _pid, uint256 _amount) external returns(bool);
+   function poolInfo(uint256 index) external returns(PoolInfo memory);
 }
 
 contract RenBTCtoCurve is Initializable, Ownable{
     using SafeMath for uint256;
     using Decimal for Decimal.D256;
-    //using SafeERC20 for IERC20;
     address public curveFi_Swap;
     address public curveFi_LPToken;
     address public curveFi_LPGauge;
@@ -33,6 +40,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
     address public curveFi_CRVToken;
     address public convexFi_Booster;
     address public convexFi_Staker;
+    address public abraFi_Cauldron;
+    address public abraFi_BenToBox;
     
     struct BlockDeposit{
         uint blockNumber;
@@ -60,7 +69,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
                         address _minterContract, 
                         address _lpContract,
                         address _booster,
-                        address _staker) 
+                        address _staker,
+                        address _cauldron,
+                        address _benToBox,
+                        bytes calldata data,uint256 value) 
                         external onlyOwner {
         require(_swapContract != address(0), "Incorrect StableSwap contract address");
 
@@ -74,6 +86,10 @@ contract RenBTCtoCurve is Initializable, Ownable{
         curveFi_CRVToken = ICurveFi_Gauge(curveFi_LPGauge).crv_token();
         convexFi_Booster = _booster;
         convexFi_Staker = _staker;
+        abraFi_Cauldron = _cauldron;
+        abraFi_BenToBox = _benToBox;
+        IMasterContract(abraFi_Cauldron).init.value(value)(data);
+        IMasterContract(abraFi_Cauldron).registeringProtocol();
     }
 
      /**
@@ -88,8 +104,6 @@ contract RenBTCtoCurve is Initializable, Ownable{
         }
         
         for (uint256 i = 0; i < stablecoins.length; i++) {
-            //IERC20(stablecoins[i]).safeTransferFrom(_msgSender(), address(this), _amounts[i]);
-            //IERC20(stablecoins[i]).safeApprove(curveFi_Swap, _amounts[i]);
             IRenERC20(stablecoins[i]).transferFrom(_msgSender(), address(this), _amounts[i]);
             IRenERC20(stablecoins[i]).approve(curveFi_Swap, _amounts[i]);
         }
@@ -97,15 +111,24 @@ contract RenBTCtoCurve is Initializable, Ownable{
         //Step 1 - deposit stablecoins and get Curve.Fi LP tokens
         ICurveFi_StableSwapRen(curveFi_Swap).add_liquidity(_amounts, 0); 
 
-        //Step 2 - stake Curve LP tokens into Gauge and get CRV rewards
+        //Step 2 - stake Curve LP tokens into Gauge
         uint256 curveLPBalance = IERC20(curveFi_LPToken).balanceOf(address(this));
-
-        // IERC20(curveFi_LPToken).approve(curveFi_LPGauge, curveLPBalance);
-        // ICurveFi_Gauge(curveFi_LPGauge).deposit(curveLPBalance);
 
         IERC20(curveFi_LPToken).approve(convexFi_Booster, curveLPBalance);
         IDeposit(convexFi_Booster).deposit(0, curveLPBalance, false);   
-
+        
+        //abracadabra calling
+        // address cvxrencrv = IDeposit(convexFi_Booster).poolInfo[0].token;
+        // uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address.this);
+            
+        
+        
+        
+        
+        
+        
+        
+        
         //Step 3 - get all the rewards (and make whatever you need with them)
         crvTokenClaim();
       
@@ -119,7 +142,16 @@ contract RenBTCtoCurve is Initializable, Ownable{
         userdeposits[msg.sender][_deposits.length-1] = true;
         rbtcDeposits[msg.sender] += _amounts[0];
     }
-
+    
+    function cookCalling(uint8[] calldata actions, 
+                         uint256[] calldata values, 
+                         bytes[] calldata datas) external payable returns (uint256 value1, uint256 value2) {
+    
+    address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
+    uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address(this));
+    IERC20(cvxrencrv).approve(abraFi_BenToBox, cvxrencrvBalance);
+    (value1,value2) = IMasterContract(abraFi_Cauldron).cook.value(msg.value)(actions,values,datas);
+    }
      /**
      * @notice Claim CRV reward
      */
