@@ -46,7 +46,7 @@ contract Stub_bentoBox is Stub_MasterContractManager{
     function _tokenBalanceOf(address token) internal view returns (uint256 amount) {
         amount = IERC20(token).balanceOf(address(this)).add(strategyData[token].balance);
     }
-
+    
     /// @notice Transfer shares from a user account to multiple other ones.
     function transfer(address token, address from, address to, uint256 share) public allowed(from) {
         // Checks

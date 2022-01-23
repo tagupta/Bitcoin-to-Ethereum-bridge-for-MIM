@@ -10,7 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.1",
+    "@nomiclabs/buidler": "^1.4.8",
+    "@openzeppelin/contracts": "^4.4.2",
     "@openzeppelin/upgrades": "^2.8.0",
     "@renproject/chains": "^2.5.7",
     "@renproject/gateway-sol": "^1.0.10",

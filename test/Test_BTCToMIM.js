@@ -9,6 +9,7 @@ const { Ethereum }  = require("@renproject/chains-ethereum");
 const { MockChain, MockProvider }  = require("@renproject/mock-provider");
 const RenJS  = require("@renproject/ren");
 const {RenVMProvider}  = require("@renproject/rpc/build/main/v2");    
+const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 
 const Adapter = artifacts.require('Basic');
 const GatewayFactory = artifacts.require('Stub_GatewayFactory');
@@ -57,7 +58,6 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
     
     //curve intergration
     let renBTC_userA;
-    let renBTC_userB;
     let renBTCAddress;
     let renBtc;
     let wBtc;
@@ -81,6 +81,7 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
     let benToBox;
     let cauldron;
     let mimCollateral;
+    let cvxrencrvBalance;
 
     const tempBTCadd = '183Y3PKMjkmH4vLTzZwpkVAxp45RTuz9rZ';
      
@@ -178,7 +179,6 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
         var _pool = await booster.poolInfo(0);
         mimCollateral = _pool.token;
         depositToken = await DepositToken.at(mimCollateral, {from: accounts[0]});
-        console.log("mimCollateral: "+ mimCollateral);
         const INTEREST_CONVERSION = 1e18 / (365.25 * 3600 * 24) / 100;
         const OPENING_CONVERSION = 1e5 / 100;
 
@@ -192,11 +192,6 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
           ["address","uint64", "uint256", "uint256", "uint256"],
           [mimCollateral, interest, liquidation, collateralization, opening]
         );
-
-        //console.log(initData);
-        //await cauldron.init(initData,{value: 0});
-        //await cauldron.registeringProtocol();
-        console.log("cauldron address: "+ cauldron.address);
       
 
         //Main contract
@@ -210,11 +205,9 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
                                  voterProxy.address, 
                                  cauldron.address,
                                  benToBox.address,
-                                 initData,0,{from:accounts[1]});
+                                 mim.address,
+                                 initData,{from:accounts[1]});
 
-        var xx = await benToBox.masterContractOf(cauldron.address);
-        console.log("xx: "+ xx);
-        //preliminary balances 1000000000
         await wBtc.transfer(accounts[2], deposits.wbtc, {from: accounts[0]});
         await wBtc.transfer(accounts[3], deposits.wbtc, {from: accounts[0]});
         
@@ -299,23 +292,18 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
     });
 
     it('Lending cvxrencrv to borrow MIM using abracadabra', async ()=> {
-      await mim.mintToBentoBox(cauldron.address, new BigNumber(100000 * 10 ** 18), benToBox.address);
-      console.log(accounts[2]);
-      
-      var cvxrencrvBalance = await depositToken.balanceOf(moneyToCurve.address);
-      console.log("cvxrencrvBalance: "+ cvxrencrvBalance);
+      await mim.mintToBentoBox(cauldron.address, new BigNumber(10000000 * 10 ** 18), benToBox.address);
+      cvxrencrvBalance = await depositToken.balanceOf(moneyToCurve.address);
       
       //1 MIM = 1 USD
       //1 cvxrencrv = 42304.3455 MIM
       // Borrow balance for 25% collateralization ratio
       var mim_borrow = web3.utils.fromWei(cvxrencrvBalance.toString(),'ether') * 42304.3455 * 0.25;
-      console.log(mim_borrow);
+      
       //ACTION_BENTO_SETAPPROVAL
       var data_0 = ethers.utils.defaultAbiCoder.encode( ["address","address", "bool"],[moneyToCurve.address, cauldron.address, true]);
+      
       //ACTION_BORROW
-      console.log("moneyToCurve: "+ moneyToCurve.address);
-      console.log("MIM address: "+ mim.address);
-
       var data_1 = ethers.utils.defaultAbiCoder.encode(["int256","address"],[web3.utils.toWei(mim_borrow.toString(),'ether'), moneyToCurve.address]);
       
       //ACTION_BENTO_WITHDRAW
@@ -329,127 +317,106 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
       
       await moneyToCurve.cookCalling([24,5,21,20,10],[0,0,0,0,0],[data_0,data_1,data_2,data_3,data_4], {value: 0, from: accounts[2]});
       
-      var mimBalance = await mim.balanceOf(moneyToCurve.address);
-      console.log("mimBalance: "+ mimBalance);
-      var cvx = await depositToken.balanceOf(moneyToCurve.address);
-      console.log("mimBalance: "+ cvx);
-      
     });
 
     it('Repaying MIM to get back cvxrencrv', async () => {
 
+      await mim.__mint(accounts[0], new BigNumber(10000 * 10 **18),{from: accounts[0]});
+      await mim.transfer(moneyToCurve.address, new BigNumber(10000 * 10 **18), {from: accounts[0]});
+      var mimBorrowed = await cauldron.userBorrowPart(moneyToCurve.address);
+      var _mimBorrowed = addTwoBigNumbers(mimBorrowed.toString(),(1 * 10 ** 18).toString());
+  
+      //ACTION_BENTO_DEPOSIT
+      var data_0 = ethers.utils.defaultAbiCoder.encode(["address","address","int256","int256"],[mim.address,moneyToCurve.address,(_mimBorrowed).toString(),0]);
+      
+      //ACTION_REPAY
+      var data_1 = ethers.utils.defaultAbiCoder.encode(["int256","address","bool"],[(mimBorrowed).toString(),moneyToCurve.address,false]);
+     
+      //ACTION_REMOVE_COLLATERAL
+      var data_2 = ethers.utils.defaultAbiCoder.encode(["int256","address"],[1,moneyToCurve.address]);
+      
+      //ACTION_BENTO_WITHDRAW
+      var data_3 = ethers.utils.defaultAbiCoder.encode(["address","address","int256","int256"],[mimCollateral,moneyToCurve.address,(cvxrencrvBalance).toString(),0]);
+
+      await moneyToCurve.cookCalling([20,2,4,21],[0,0,0,0],[data_0,data_1,data_2,data_3], {value: 0, from: accounts[2]});
+
     });
     
-    // it('Checking the minting of renBTC from BTC for User 2', async () => {
-    //     const decimals = Bitcoin.assetDecimals(Bitcoin.asset);
-    //     const btcAmount = new BigNumber(Math.random()).decimalPlaces(decimals);
-    //     const nonce = utils.keccak256(Buffer.from("1"));
+    it('Withdraw money from curve.fi by user 1', async () =>{
+      await truffleAssert.passes(moneyToCurve.multiStepWithdraw([renBTC_userA,0],{from:accounts[2]}));
+    });
 
-    //     // Shift the amount by the asset's decimals (8 for BTC).
-    //     const satsAmount = new BigNumber(btcAmount).times(new BigNumber(10).exponentiatedBy(decimals));
-    //     const fixedFee = 1000; // sats
-    //     const percentFee = 15; // BIPS
-
-    //     const mint = await renJS.lockAndMint({
-    //         asset: "BTC",
-    //         from: Bitcoin,
-    //         to: Ethereum({provider: user.provider, signer: user},network).Contract({
-    //         sendTo: adapter.address,
-    //         contractFn: "temporaryMint",
-    //         contractParams: [
-    //           {
-    //             name: "to",
-    //             type: "address",
-    //             value: accounts[3],
-    //           },
-    //           {
-    //             name: "nonce",
-    //             type: "bytes32",
-    //             value: nonce,
-    //           }
-    //         ],
-    //         }),
-    //     });
-
-    //     // Mock deposit. Currently must be passed in as a number.
-    //     Bitcoin.addUTXO(mint.gatewayAddress, satsAmount.toNumber());
-        
-    //     const balanceBefore = await adapter.userBalance(accounts[3]);
-
-    //     await new Promise((resolve, reject) => {
-    //         mint.on("deposit", async deposit => {
-    //           try {
-    //             await deposit.confirmed();
-    //             await deposit.signed();
-    //             //await deposit.mint();
-    //             const tx = await deposit.queryTx()
-    //             if (tx.out && !tx.out.revert) {
-    //               await adapter.temporaryMint(accounts[3], nonce, 'BTC', new BigNumber(tx.out.amount.toString()), tx.out.nhash, tx.out.signature)
-    //             } else {
-    //               throw new Error('revert was present on the out')
-    //             }
-    //             resolve();
-    //           } catch (error) {
-    //             console.error(error);
-    //             reject(error);
-    //           }
-    //         });
-    //     });
-
-    //     renBTC_userB = await adapter.userBalance(accounts[3]);
-    //     const expected = satsAmount.minus(fixedFee).times(1 - percentFee / 10000).integerValue(BigNumber.ROUND_UP);
-    //     assert((renBTC_userB - balanceBefore).toString() == expected.toString(),'Problem with minting of renBTC');
-    // });
-
-    // it('Deposit the money into Defi for User 2', async () =>{
-    //     await renBtc.approve(moneyToCurve.address, renBTC_userB, {from: accounts[3]});
-    //     await wBtc.approve(moneyToCurve.address,deposits.wbtc, {from:accounts[3]});
-    //     await truffleAssert.passes(moneyToCurve.multiStepDeposit([renBTC_userB,deposits.wbtc], {from:accounts[3]}));
-    // });
-
-    // it('Withdraw money from curve.fi by user 1', async () =>{
-    //   await truffleAssert.passes(moneyToCurve.multiStepWithdraw([renBTC_userA,0],{from:accounts[2]}));
-    // });
-
-    // it('should be able to burn the minted tokens for user 1', async () =>{
-    //   const amount = renBTC_userA / 10 ** 8;
-    //   await renBtc.approve(adapter.address, renBTC_userA,{from: accounts[2]})
-    //   const burnAndRelease = await renJS.burnAndRelease({
-    //     asset: "BTC",
-    //     to: Bitcoin.Address(tempBTCadd),
-    //     from: Ethereum({provider: user.provider, signer: user},network).Contract((btcAddress) => ({
-    //       sendTo: adapter.address,
-    //       contractFn: "temporaryBurn",
-    //       contractParams: [
-    //       {
-    //         type: "bytes",
-    //         name: "_msg",
-    //         value: Buffer.from(`Withdrawing ${amount} BTC`),
-    //       },
-    //       {
-    //         type: "bytes",
-    //         name: "_to",
-    //         value: btcAddress,
-    //       },
-    //       {
-    //         type: "uint256",
-    //         name: "_amount",
-    //         value: renJS.utils.toSmallestUnit(amount, 8),
-    //       },
-    //       {
-    //         type: 'address',
-    //         name: 'from',
-    //         value: accounts[2]
-    //       }
-    //       ],
-    //     }))
-    //    });
+    it('should be able to burn the minted tokens for user 1', async () =>{
+      const amount = renBTC_userA / 10 ** 8;
+      await renBtc.approve(adapter.address, renBTC_userA,{from: accounts[2]})
+      const burnAndRelease = await renJS.burnAndRelease({
+        asset: "BTC",
+        to: Bitcoin.Address(tempBTCadd),
+        from: Ethereum({provider: user.provider, signer: user},network).Contract((btcAddress) => ({
+          sendTo: adapter.address,
+          contractFn: "temporaryBurn",
+          contractParams: [
+          {
+            type: "bytes",
+            name: "_msg",
+            value: Buffer.from(`Withdrawing ${amount} BTC`),
+          },
+          {
+            type: "bytes",
+            name: "_to",
+            value: btcAddress,
+          },
+          {
+            type: "uint256",
+            name: "_amount",
+            value: renJS.utils.toSmallestUnit(amount, 8),
+          },
+          {
+            type: 'address',
+            name: 'from',
+            value: accounts[2]
+          }
+          ],
+        }))
+       });
        
-    //    await burnAndRelease.burn();
-    //    await burnAndRelease.release();
+       await burnAndRelease.burn();
+       await burnAndRelease.release();
       
-    // });   
+    });   
 });
+
+function addZeroToString(str1, str2){
+    while (str1.length > str2.length) {
+        str2 = "0" + str2;
+    }
+    return str2;
+}
+
+function addTwoBigNumbers(a, b) {
+    if (a.length > b.length) {
+        b = addZeroToString(a,b);
+    } else {
+        a = addZeroToString(b,a);
+    }
+    a1 = a.split("");
+    b1 = b.split("");
+    let sum = 0;
+    let carry = 0;
+    let array = [];
+    for (var i = a1.length-1; i >= 0; i--) {
+        sum = parseInt(a[i]) + parseInt(b[i]) + parseInt(carry);
+        if (sum >= 10) {
+            carry = 1;
+            sum = sum - 10;
+        } else {
+            carry = 0;
+        }
+        array.push(sum);
+    }
+    array.reverse().join("");
+    return array.join("");
+}
 
 const LocalEthereumNetwork = (networkID, gatewayRegistryAddress, basicAdapterAddress) =>({
     name: "dev",

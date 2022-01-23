@@ -1,5 +1,6 @@
 const { BN } = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
+const ethers = require('ethers');
 
 const RENERC20 = artifacts.require('Stub_RenERC20');
 const ERC20 = artifacts.require('Stub_ERC20');
@@ -17,6 +18,11 @@ const Booster = artifacts.require('Stub_Booster');
 
 const MoneyToCurve = artifacts.require('RenBTCtoCurve');
 
+//abracadabra integration
+const MIM = artifacts.require('Stub_MagicInternetMoney');
+const BenToBox =  artifacts.require('Stub_bentoBox');
+const Cauldron =  artifacts.require('Stub_CauldronV2CheckpointV1');
+
 const supplies = {
     renbtc : new BN('1000000000000000000000000'),
     wbtc : new BN('0')
@@ -27,7 +33,7 @@ const deposits  = {
     wbtc: new BN('0'), 
 }
 
-contract('Integrate curve and convex into the Defi', async accounts =>{
+contract('Witnessing the transition of renBTC to cvxrencrv', async accounts =>{
     // accounts[0] : owner
     // accounts[1] : defiowner
     // accounts[2] : user 1
@@ -50,6 +56,11 @@ contract('Integrate curve and convex into the Defi', async accounts =>{
     let tokenFactory;
     let voterProxy;
     let booster;
+    //abracadabra integration
+    let mim;
+    let benToBox;
+    let cauldron;
+    let mimCollateral;
 
     before(async() =>{
         _renBtc = await ERC20.new({from: accounts[0]});
@@ -113,6 +124,26 @@ contract('Integrate curve and convex into the Defi', async accounts =>{
         await booster.setFactories(tokenFactory.address);
         await booster.addPool(curveSwap.address, curveGauge.address, 1);
         
+        //abracadabra contracts
+        mim = await MIM.deployed();
+        benToBox = await BenToBox.deployed();
+        cauldron = await Cauldron.deployed();
+        var _pool = await booster.poolInfo(0);
+        mimCollateral = _pool.token;
+        const INTEREST_CONVERSION = 1e18 / (365.25 * 3600 * 24) / 100;
+        const OPENING_CONVERSION = 1e5 / 100;
+
+        // 75% LTV .5% initial 0.5% Interest
+        const collateralization = 75 * 1e3; // 75% LTV
+        const opening = 0.5 * OPENING_CONVERSION; // .5% initial
+        const interest = parseInt(String(0.5 * INTEREST_CONVERSION)); // 0.5% Interest
+        const liquidation = 12.5 * 1e3 + 1e5;
+
+        let initData = ethers.utils.defaultAbiCoder.encode(
+          ["address","uint64", "uint256", "uint256", "uint256"],
+          [mimCollateral, interest, liquidation, collateralization, opening]
+        );
+      
         // Main contract
         moneyToCurve = await MoneyToCurve.deployed();
         await moneyToCurve.initialize({from:accounts[1]});
@@ -122,7 +153,10 @@ contract('Integrate curve and convex into the Defi', async accounts =>{
                                  curveLPToken.address,
                                  booster.address,
                                  voterProxy.address,
-                                 {from:accounts[1]});
+                                 cauldron.address,
+                                 benToBox.address,
+                                 mim.address,
+                                 initData,{from:accounts[1]});
 
         //preliminary balances
         await renBtc.transfer(accounts[2], new BN('20000000000'),{from: accounts[0]});

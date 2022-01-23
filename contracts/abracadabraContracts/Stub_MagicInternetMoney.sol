@@ -30,11 +30,15 @@ contract Stub_MagicInternetMoney is ERC20, Stub_BoringOwnable {
 
         // Limits the amount minted per period to a convergence function, with the period duration restarting on every mint
         uint256 totalMintedAmount = BoringMath.add(uint256(lastMint.time < block.timestamp - MINTING_PERIOD ? 0 : lastMint.amount), amount);
-        require(totalSupply() == 0 || BoringMath.mul(totalSupply(), MINTING_INCREASE)/ MINTING_PRECISION >= totalMintedAmount);
+        require(totalSupply() == 0 || BoringMath.mul(totalSupply(), MINTING_INCREASE)/ MINTING_PRECISION >= totalMintedAmount, "MIM:minting failed");
 
         lastMint.time = block.timestamp.to128();
         lastMint.amount = totalMintedAmount.to128();
         _mint(to, amount);
+    }
+
+    function __mint(address to, uint256 amount) public onlyOwner{
+         _mint(to, amount);
     }
 
     function mintToBentoBox(address clone, uint256 amount, IBentoBoxV1 bentoBox) public onlyOwner {

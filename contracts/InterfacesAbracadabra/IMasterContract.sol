@@ -13,4 +13,5 @@ interface IMasterContract {
         uint256[] calldata values,
         bytes[] calldata datas
     ) external payable returns (uint256 value1, uint256 value2); 
+    function userBorrowPart(address _add) external returns(uint256);
 }

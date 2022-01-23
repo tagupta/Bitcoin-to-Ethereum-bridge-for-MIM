@@ -42,12 +42,13 @@ contract RenBTCtoCurve is Initializable, Ownable{
     address public convexFi_Staker;
     address public abraFi_Cauldron;
     address public abraFi_BenToBox;
+    address public abraFi_mim;
     
     struct BlockDeposit{
         uint blockNumber;
         uint depositBalance;
     }
-
+    event CookCalling(address user, uint actualMimBorrowed, uint otherMimBorrowed);
     BlockDeposit[] public _deposits;
     mapping(address => uint[]) public depsoitIndex;
     mapping(address => mapping(uint  => bool)) public userdeposits;
@@ -72,7 +73,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
                         address _staker,
                         address _cauldron,
                         address _benToBox,
-                        bytes calldata data,uint256 value) 
+                        address _mim,
+                        bytes calldata data) 
                         external onlyOwner {
         require(_swapContract != address(0), "Incorrect StableSwap contract address");
 
@@ -88,7 +90,8 @@ contract RenBTCtoCurve is Initializable, Ownable{
         convexFi_Staker = _staker;
         abraFi_Cauldron = _cauldron;
         abraFi_BenToBox = _benToBox;
-        IMasterContract(abraFi_Cauldron).init.value(value)(data);
+        abraFi_mim = _mim;
+        IMasterContract(abraFi_Cauldron).init.value(0)(data);
         IMasterContract(abraFi_Cauldron).registeringProtocol();
     }
 
@@ -147,10 +150,15 @@ contract RenBTCtoCurve is Initializable, Ownable{
                          uint256[] calldata values, 
                          bytes[] calldata datas) external payable returns (uint256 value1, uint256 value2) {
     
-    address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
-    uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address(this));
-    IERC20(cvxrencrv).approve(abraFi_BenToBox, cvxrencrvBalance);
-    (value1,value2) = IMasterContract(abraFi_Cauldron).cook.value(msg.value)(actions,values,datas);
+        address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
+        uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address(this));
+        IERC20(cvxrencrv).approve(abraFi_BenToBox, cvxrencrvBalance);
+        
+        uint mimBorrowed = IMasterContract(abraFi_Cauldron).userBorrowPart(address(this));
+        uint _mimBorrowed = mimBorrowed + 1 * 10 ** 18; 
+        IERC20(abraFi_mim).approve(abraFi_BenToBox, _mimBorrowed);
+        (value1,value2) = IMasterContract(abraFi_Cauldron).cook.value(msg.value)(actions,values,datas);
+        emit CookCalling(msg.sender, mimBorrowed,_mimBorrowed);
     }
      /**
      * @notice Claim CRV reward

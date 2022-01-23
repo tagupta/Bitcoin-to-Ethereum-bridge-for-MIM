@@ -2,6 +2,8 @@
 pragma solidity >=0.4.22 <0.9.0;
 pragma experimental ABIEncoderV2;
 
+import '@nomiclabs/buidler/console.sol';
+
 import '../InterfacesAbracadabra/IBentoBoxV1.sol';
 import '../InterfacesAbracadabra/IOracle.sol';
 import '../InterfacesAbracadabra/IMasterContract.sol';
@@ -38,14 +40,14 @@ contract Stub_CauldronV2CheckpointV1 is Stub_BoringOwnable, IMasterContract{
     mapping(address => uint256) public userBorrowPart;
 
     uint256 public exchangeRate;
-
+    event LogRepay(address indexed from, address indexed to, uint256 amount, uint256 share, uint256 part);
     struct AccrueInfo {
         uint64 lastAccrued;
         uint128 feesEarned;
         uint64 INTEREST_PER_SECOND;
     }
     AccrueInfo public accrueInfo;
-
+   
     uint256 public COLLATERIZATION_RATE;
     uint256 private constant COLLATERIZATION_RATE_PRECISION = 1e5; // Must be less than EXCHANGE_RATE_PRECISION (due to optimization in math)
 
@@ -177,18 +179,16 @@ contract Stub_CauldronV2CheckpointV1 is Stub_BoringOwnable, IMasterContract{
         accrue();
         (part, share) = _borrow(to, amount);
     }
-
-    function _repay(
-        address to,
-        bool skim,
-        uint256 part
-    ) internal returns (uint256 amount) {
+    
+    function _repay(address to, bool skim, uint256 part) internal returns (uint256 amount) {
         (totalBorrow, amount) = totalBorrow.sub(part, true);
         userBorrowPart[to] = userBorrowPart[to].sub(part);
 
         uint256 share = bentoBox.toShare(magicInternetMoney, amount, true);
+        console.log(share);
+        emit LogRepay(skim ? address(bentoBox) : msg.sender, to, amount, share, part);
         bentoBox.transfer(magicInternetMoney, skim ? address(bentoBox) : msg.sender, address(this), share);
-        //emit LogRepay(skim ? address(bentoBox) : msg.sender, to, amount, part);
+        
     }
 
     function repay(
