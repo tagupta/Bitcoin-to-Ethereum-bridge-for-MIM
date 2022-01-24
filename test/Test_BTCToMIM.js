@@ -293,7 +293,8 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
 
     it('Lending cvxrencrv to borrow MIM using abracadabra', async ()=> {
       await mim.mintToBentoBox(cauldron.address, new BigNumber(10000000 * 10 ** 18), benToBox.address);
-      cvxrencrvBalance = await depositToken.balanceOf(moneyToCurve.address);
+      
+      cvxrencrvBalance = await moneyToCurve.cvxrencrvDeposits(accounts[2]);
       
       //1 MIM = 1 USD
       //1 cvxrencrv = 42304.3455 MIM
@@ -315,17 +316,20 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
       //ACTION_ADD_COLLATERAL
       var data_4 = ethers.utils.defaultAbiCoder.encode(["int256","address","bool"],[1,moneyToCurve.address,false]);
       
-      await moneyToCurve.cookCalling([24,5,21,20,10],[0,0,0,0,0],[data_0,data_1,data_2,data_3,data_4], {value: 0, from: accounts[2]});
+      await moneyToCurve.cookCalling([24,5,21,20,10],[0,0,0,0,0],[data_0,data_1,data_2,data_3,data_4],false,0, {value: 0, from: accounts[2]});
       
     });
 
     it('Repaying MIM to get back cvxrencrv', async () => {
 
-      await mim.__mint(accounts[0], new BigNumber(10000 * 10 **18),{from: accounts[0]});
-      await mim.transfer(moneyToCurve.address, new BigNumber(10000 * 10 **18), {from: accounts[0]});
-      var mimBorrowed = await cauldron.userBorrowPart(moneyToCurve.address);
+      await mim.__mint(accounts[0], new BigNumber(100000 * 10 **18),{from: accounts[0]});
+      await mim.transfer(accounts[2], new BigNumber(100000 * 10 **18), {from: accounts[0]});
+      var mimBorrowed = await moneyToCurve.mimBorrowed(accounts[2]);
       var _mimBorrowed = addTwoBigNumbers(mimBorrowed.toString(),(1 * 10 ** 18).toString());
-  
+      
+      
+      await mim.approve(moneyToCurve.address, _mimBorrowed,{from: accounts[2]});
+
       //ACTION_BENTO_DEPOSIT
       var data_0 = ethers.utils.defaultAbiCoder.encode(["address","address","int256","int256"],[mim.address,moneyToCurve.address,(_mimBorrowed).toString(),0]);
       
@@ -338,7 +342,7 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
       //ACTION_BENTO_WITHDRAW
       var data_3 = ethers.utils.defaultAbiCoder.encode(["address","address","int256","int256"],[mimCollateral,moneyToCurve.address,(cvxrencrvBalance).toString(),0]);
 
-      await moneyToCurve.cookCalling([20,2,4,21],[0,0,0,0],[data_0,data_1,data_2,data_3], {value: 0, from: accounts[2]});
+     await moneyToCurve.cookCalling([20,2,4,21],[0,0,0,0],[data_0,data_1,data_2,data_3],true,(_mimBorrowed).toString(), {value: 0, from: accounts[2]});
 
     });
     

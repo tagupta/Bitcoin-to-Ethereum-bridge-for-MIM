@@ -48,11 +48,14 @@ contract RenBTCtoCurve is Initializable, Ownable{
         uint blockNumber;
         uint depositBalance;
     }
-    event CookCalling(address user, uint actualMimBorrowed, uint otherMimBorrowed);
+    event CookCalling(address user, uint mimBorrowed, uint mimUserBalance);
     BlockDeposit[] public _deposits;
     mapping(address => uint[]) public depsoitIndex;
     mapping(address => mapping(uint  => bool)) public userdeposits;
     mapping(address => uint256) public rbtcDeposits;
+    mapping(address => uint256) public cvxrencrvDeposits;
+    mapping(address => uint256) public mimBorrowed; 
+    mapping(address => uint256) public mimBalance;
 
     function initialize() external initializer {
         Ownable.initialize(_msgSender());
@@ -118,25 +121,17 @@ contract RenBTCtoCurve is Initializable, Ownable{
         uint256 curveLPBalance = IERC20(curveFi_LPToken).balanceOf(address(this));
 
         IERC20(curveFi_LPToken).approve(convexFi_Booster, curveLPBalance);
-        IDeposit(convexFi_Booster).deposit(0, curveLPBalance, false);   
+        IDeposit(convexFi_Booster).deposit(0, curveLPBalance, false);       
         
-        //abracadabra calling
-        // address cvxrencrv = IDeposit(convexFi_Booster).poolInfo[0].token;
-        // uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address.this);
-            
-        
-        
-        
-        
-        
-        
-        
-        
+        //keeping track of user balance for cvxrencrv
+        address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
+        uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address(this));
+        cvxrencrvDeposits[msg.sender] += cvxrencrvBalance;
+
         //Step 3 - get all the rewards (and make whatever you need with them)
         crvTokenClaim();
       
-       
-       uint256 summ;
+        uint256 summ;
         for (uint256 i=0; i < stablecoins.length; i++){
             summ = summ.add(normalize(stablecoins[i], _amounts[i]));
         }
@@ -148,17 +143,26 @@ contract RenBTCtoCurve is Initializable, Ownable{
     
     function cookCalling(uint8[] calldata actions, 
                          uint256[] calldata values, 
-                         bytes[] calldata datas) external payable returns (uint256 value1, uint256 value2) {
-    
+                         bytes[] calldata datas, bool isRepay, uint256 payMim) external payable returns (uint256 value1, uint256 value2) {
+        
         address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
-        uint cvxrencrvBalance = IERC20(cvxrencrv).balanceOf(address(this));
+        uint cvxrencrvBalance = cvxrencrvDeposits[msg.sender];
         IERC20(cvxrencrv).approve(abraFi_BenToBox, cvxrencrvBalance);
         
-        uint mimBorrowed = IMasterContract(abraFi_Cauldron).userBorrowPart(address(this));
-        uint _mimBorrowed = mimBorrowed + 1 * 10 ** 18; 
-        IERC20(abraFi_mim).approve(abraFi_BenToBox, _mimBorrowed);
+        if(isRepay){
+            require(payMim >= (mimBorrowed[msg.sender] + 1 * 10 ** 18),"Main Contract: mim inappropriate amount");
+            IERC20(abraFi_mim).transferFrom(msg.sender, address(this), payMim);
+            IERC20(abraFi_mim).approve(abraFi_BenToBox, payMim);
+        }
+      
         (value1,value2) = IMasterContract(abraFi_Cauldron).cook.value(msg.value)(actions,values,datas);
-        emit CookCalling(msg.sender, mimBorrowed,_mimBorrowed);
+        uint256 mimBalance;
+        if(!isRepay){
+            mimBorrowed[msg.sender] = (IMasterContract(abraFi_Cauldron).userBorrowPart(address(this)));
+            mimBalance = IERC20(abraFi_mim).balanceOf(address(this));
+            IERC20(abraFi_mim).transfer(msg.sender, mimBalance);
+        }
+        emit CookCalling(msg.sender, mimBorrowed[msg.sender],mimBalance);
     }
      /**
      * @notice Claim CRV reward
@@ -210,7 +214,9 @@ contract RenBTCtoCurve is Initializable, Ownable{
         }
 
         crvTokenClaim();
-        
+
+        cvxrencrvDeposits[msg.sender] = 0;
+
         uint256 summ;
         for (uint256 i=0; i < stablecoins.length; i++){
             summ = summ.add(normalize(stablecoins[i], _amounts[i]));
