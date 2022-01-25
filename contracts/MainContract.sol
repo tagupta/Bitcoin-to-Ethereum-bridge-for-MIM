@@ -30,7 +30,7 @@ interface IDeposit{
    function poolInfo(uint256 index) external returns(PoolInfo memory);
 }
 
-contract RenBTCtoCurve is Initializable, Ownable{
+contract MainContract is Initializable, Ownable{
     using SafeMath for uint256;
     using Decimal for Decimal.D256;
     address public curveFi_Swap;
@@ -148,7 +148,9 @@ contract RenBTCtoCurve is Initializable, Ownable{
         address cvxrencrv = IDeposit(convexFi_Booster).poolInfo(0).token;
         uint cvxrencrvBalance = cvxrencrvDeposits[msg.sender];
         IERC20(cvxrencrv).approve(abraFi_BenToBox, cvxrencrvBalance);
-        
+
+        uint preBorrowBalance = (IMasterContract(abraFi_Cauldron).userBorrowPart(address(this)));
+
         if(isRepay){
             require(payMim >= (mimBorrowed[msg.sender] + 1 * 10 ** 18),"Main Contract: mim inappropriate amount");
             IERC20(abraFi_mim).transferFrom(msg.sender, address(this), payMim);
@@ -158,7 +160,12 @@ contract RenBTCtoCurve is Initializable, Ownable{
         (value1,value2) = IMasterContract(abraFi_Cauldron).cook.value(msg.value)(actions,values,datas);
         uint256 mimBalance;
         if(!isRepay){
-            mimBorrowed[msg.sender] = (IMasterContract(abraFi_Cauldron).userBorrowPart(address(this)));
+            if(mimBorrowed[msg.sender] > 0){
+                mimBorrowed[msg.sender] += (IMasterContract(abraFi_Cauldron).userBorrowPart(address(this)) - preBorrowBalance);
+            }
+            else{
+                mimBorrowed[msg.sender] = (IMasterContract(abraFi_Cauldron).userBorrowPart(address(this)) - preBorrowBalance);
+            }
             mimBalance = IERC20(abraFi_mim).balanceOf(address(this));
             IERC20(abraFi_mim).transfer(msg.sender, mimBalance);
         }

@@ -22,7 +22,7 @@ const CurveSwap = artifacts.require('Stub_CurveFi_Swap');
 const CurveLPToken = artifacts.require('Stub_LPToken');
 const CurveCRVMinter = artifacts.require('Stub_CurveFi_Minter');
 const CurveGauge = artifacts.require('Stub_CurveFi_Gauge');
-const MoneyToCurve = artifacts.require('RenBTCtoCurve');
+const MoneyToCurve = artifacts.require('MainContract');
 
 //convex intergration
 const Registry = artifacts.require('Stub_addressProvider');
@@ -76,6 +76,7 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
     let voterProxy;
     let booster;
     let depositToken;
+    
     //abracadabra integration
     let mim;
     let benToBox;
@@ -292,7 +293,7 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
     });
 
     it('Lending cvxrencrv to borrow MIM using abracadabra', async ()=> {
-      await mim.mintToBentoBox(cauldron.address, new BigNumber(10000000 * 10 ** 18), benToBox.address);
+      await mim.mintToBentoBox(cauldron.address, new BigNumber(1000000000000000 * 10 ** 18), benToBox.address);
       
       cvxrencrvBalance = await moneyToCurve.cvxrencrvDeposits(accounts[2]);
       
@@ -318,6 +319,11 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
       
       await moneyToCurve.cookCalling([24,5,21,20,10],[0,0,0,0,0],[data_0,data_1,data_2,data_3,data_4],false,0, {value: 0, from: accounts[2]});
       
+      var zz = await mim.balanceOf(accounts[2]);
+      console.log("Mim balance of user after borrowing: "+ zz);
+
+      var mimBorrowed = await moneyToCurve.mimBorrowed(accounts[2]);
+      console.log("mimBorrowed: "+ mimBorrowed);
     });
 
     it('Repaying MIM to get back cvxrencrv', async () => {
@@ -342,8 +348,8 @@ contract('Witnessing the transition of BTC to MIM and vice versa', async account
       //ACTION_BENTO_WITHDRAW
       var data_3 = ethers.utils.defaultAbiCoder.encode(["address","address","int256","int256"],[mimCollateral,moneyToCurve.address,(cvxrencrvBalance).toString(),0]);
 
-     await moneyToCurve.cookCalling([20,2,4,21],[0,0,0,0],[data_0,data_1,data_2,data_3],true,(_mimBorrowed).toString(), {value: 0, from: accounts[2]});
-
+      await moneyToCurve.cookCalling([20,2,4,21],[0,0,0,0],[data_0,data_1,data_2,data_3],true,(_mimBorrowed).toString(), {value: 0, from: accounts[2]});
+      
     });
     
     it('Withdraw money from curve.fi by user 1', async () =>{

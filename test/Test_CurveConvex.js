@@ -16,7 +16,7 @@ const TokenFactory = artifacts.require('Stub_TokenFactory');
 const VoterProxy = artifacts.require('Stub_CurveVoterProxy');
 const Booster = artifacts.require('Stub_Booster');
 
-const MoneyToCurve = artifacts.require('RenBTCtoCurve');
+const MoneyToCurve = artifacts.require('MainContract');
 
 //abracadabra integration
 const MIM = artifacts.require('Stub_MagicInternetMoney');
