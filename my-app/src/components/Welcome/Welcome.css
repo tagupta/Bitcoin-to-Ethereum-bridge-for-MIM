@@ -19,3 +19,7 @@
 .MuiDialogContent-root .css-ypiqx9-MuiDialogContent-root {
     font-family : monospace;
 }
+
+#buttonFooter{
+    justify-content: center;
+}

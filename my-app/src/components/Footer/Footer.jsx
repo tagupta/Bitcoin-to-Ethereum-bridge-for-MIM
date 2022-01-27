@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-// import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 
@@ -31,6 +31,9 @@ export default class Footer extends Component {
       else if(newValue === 2){
         this.setState({displayData: "My address: " + this.props.userAddress});
       }
+      else{
+          this.props.handleDetails(true);
+      }
     }
 
 
@@ -43,6 +46,7 @@ export default class Footer extends Component {
                     <BottomNavigationAction label="MIM address" icon={<HomeIcon />}/>
                     <BottomNavigationAction label="Check MIM Balance" icon={<AccountBalanceWalletIcon />}/>
                     <BottomNavigationAction label="My address" icon={<PersonIcon />}/>
+                    <BottomNavigationAction label="Details" icon={<SettingsIcon />}/>
                 </BottomNavigation>
                 </Box>
         )

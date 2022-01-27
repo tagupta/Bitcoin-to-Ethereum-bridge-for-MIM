@@ -5,7 +5,7 @@ import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import styled from 'styled-components';
-
+import BigNumber from 'bignumber.js';
 import RenJS from "@renproject/ren";
 import { Bitcoin, Ethereum } from "@renproject/chains";
 import {utils} from 'ethers';
@@ -23,11 +23,10 @@ import Header from './components/Header/Header';
 import Balance from './components/Balance/Balance';
 import Message from './components/Message/Message';
 import Footer from './components/Footer/Footer';
-import { Button } from '@mui/material';
 
 const contractAddress = "0x0095B4DAc18654bc59c38943feE47C92c51C6D62"; // basic contract
 ///const curveCRVAddress = "0x6C0aF5282BE21338BcCB2A78fE516EA8A3530d35";
-const owner = "0x9C87885Dfe734F274Da768EC985768C483BB89fa";
+//const owner = "0x9C87885Dfe734F274Da768EC985768C483BB89fa";
 const defiAddress  = "0x5CA2B97161Fa8184D18ebB74838ed46eD3A3B2bF";
 const wBTCAddress = "0x87F922881dA425220CC99F79A65D9C643912530E";
 const cauldronAddress = "0xc69055B7E0FC1a00A6Ac426999bcb9FCc1B8B16f"
@@ -38,24 +37,6 @@ const AppDiv = styled.div`
 font-family: monospace;
 color: #b406c4;
 `;
-
-// const toFixed = (x) => {
-//   if (Math.abs(x) < 1.0) {
-//     var e = parseInt(x.toString().split('e-')[1]);
-//     if (e) {
-//         x *= Math.pow(10,e-1);
-//         x = '0.' + (new Array(e)).join('0') + x.toString().substring(2);
-//     }
-//   } else {
-//     var ee = parseInt(x.toString().split('+')[1]);
-//     if (ee > 20) {
-//         ee -= 20;
-//         x /= Math.pow(10,ee);
-//         x += (new Array(ee+1)).join('0');
-//     }
-//   }
-//   return x;
-// }
 
 function addZeroToString(str1, str2){
   while (str1.length > str2.length) {
@@ -100,6 +81,7 @@ class App extends React.Component{
       disableWithdraw: true,
       maxDeposit: 0,
       userShare: "",
+      openDetails: true,
     };
   }
   
@@ -491,40 +473,32 @@ class App extends React.Component{
     this.handleClose();
   }
 
-  handleCheck = async() => {
-    const {address,web3} = this.state;
-    const booster = await new web3.eth.Contract(Booster,boosterAddress,{from: address});
-    const mimm = await new web3.eth.Contract(MIM,mimAddress,{from: address});
-    var _pool = await booster.methods.poolInfo(0).call();
-    const renBTCToCRV = await new web3.eth.Contract(MoneyToCurve,defiAddress,{from:address});
-    var cvxrencrvBalance = await renBTCToCRV.methods.cvxrencrvDeposits(address).call();
-    console.log("cvxrencrvBalance: "+ cvxrencrvBalance);
-    var userMIMBalance = await mimm.methods.balanceOf(address).call();
-    console.log("userMIMBalance: "+ userMIMBalance);
-    console.log(_pool);
-
-  }
-
   handleUserMimBalance = async () => {
     const {address,web3} = this.state;
     const mimm = await new web3.eth.Contract(MIM,mimAddress,{from: address});
     var userMIMBalance = await mimm.methods.balanceOf(address).call();
-    this.setState({userMIMBalance: userMIMBalance});
+    var tokens = new BigNumber(userMIMBalance).dividedBy(10 ** 18);
+    this.setState({userMIMBalance: tokens.toPrecision(26)});
+  }
+
+  handleDetails = (open) =>{
+    this.setState({openDetails: open});
   }
 
   render = () => {
-    const { message, error, isOpen ,maxDeposit, userShare, address,userMIMBalance} = this.state;
+    const { message, error, isOpen ,maxDeposit, userShare, address,userMIMBalance,openDetails} = this.state;
     return (
       <AppDiv>
-        <Welcome/>
+        <Welcome openDetails={openDetails} 
+                 handleDetails={this.handleDetails}/>
         <Header/>
         <Balance mimBorrow = {maxDeposit}
                  handleMax = {this.handleMax}
                  handleCRVBalance = {this.handleCRVBalance} 
                  deposit = {this.deposit}
                  withdraw = {this.withdraw}
-                 logError = {this.logError}
-                 /> 
+                 logError = {this.logError}/>
+
         <Message msg = {message} err = {error}/>
 
         <Footer fetch={this.handleFetch} 
@@ -532,14 +506,13 @@ class App extends React.Component{
                 userShare={userShare} 
                 userAddress={address}
                 userMIMBalance = {userMIMBalance}
-                handleUserMimBalance = {this.handleUserMimBalance}/>
+                handleUserMimBalance = {this.handleUserMimBalance}
+                handleDetails={this.handleDetails}/>
 
         <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
                   open={isOpen}>
           <CircularProgress color="inherit" />
         </Backdrop>
-          <Button onClick={this.handleCheck}>Here</Button>
-          <Button onClick={this.handleExtraMinting}>Mint MIM</Button>
       </AppDiv>
     );
   };
