@@ -27,6 +27,10 @@ export default class Message extends Component {
                     {err ? <p style={{ color: "red" }}>{err}</p> : null}
                 </Div>
             </Container>
+
+            
+
+            
         )
     }
 }

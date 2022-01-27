@@ -42,13 +42,13 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    // development: {
-    //  host: "127.0.0.1",     // Localhost (default: none)
-    //  port: 8545,            // Standard Ethereum port (default: none)
-    //  network_id: "*",       // Any network (default: none)
-    //  gas: 999999999,           // Gas sent with each transaction (default: ~6700000) 0x3B9AC9FF
-    // //  gasPrice: 20000000000
-    // },
+    development: {
+     host: "127.0.0.1",     // Localhost (default: none)
+     port: 8545,            // Standard Ethereum port (default: none)
+     network_id: "*",       // Any network (default: none)
+     gas: 999999999,           // Gas sent with each transaction (default: ~6700000) 0x3B9AC9FF
+    //  gasPrice: 20000000000
+    },
     // ganache: {
     //   provider: () => new HDWalletProvider(mnemonicDev, `HTTP://127.0.0.1:7545`),
     //   host: "127.0.0.1",     // Localhost (default: none)
@@ -74,18 +74,18 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-    kovan: {
-      provider: function() {
-        return new HDWalletProvider(privateKey,endpointUrl)
-      },
-      gas: 6721975,
-      gasPrice: 120000000000,
-      network_id: 42,
-      networkCheckTimeout: 1000000000,
-      timeoutBlocks: 3000,
-      skipDryRun: true,
-      //confirmations: 2,
-    }
+    // kovan: {
+    //   provider: function() {
+    //     return new HDWalletProvider(privateKey,endpointUrl)
+    //   },
+    //   gas: 6721975,
+    //   gasPrice: 120000000000,
+    //   network_id: 42,
+    //   networkCheckTimeout: 1000000000,
+    //   timeoutBlocks: 3000,
+    //   skipDryRun: true,
+    //   //confirmations: 2,
+    // }
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
