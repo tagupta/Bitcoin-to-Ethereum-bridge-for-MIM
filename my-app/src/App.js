@@ -11,7 +11,6 @@ import { Bitcoin, Ethereum } from "@renproject/chains";
 import {utils} from 'ethers';
 import {ethers} from 'ethers';
 
-
 import ABI from "./json/ABI.json"; //json of basic contract
 import RENERC20 from "./json/RenERC20.json";
 import MoneyToCurve from './json/MoneytoCurve.json';
@@ -25,8 +24,8 @@ import Message from './components/Message/Message';
 import Footer from './components/Footer/Footer';
 
 const contractAddress = "0x0095B4DAc18654bc59c38943feE47C92c51C6D62"; // basic contract
-///const curveCRVAddress = "0x6C0aF5282BE21338BcCB2A78fE516EA8A3530d35";
-//const owner = "0x9C87885Dfe734F274Da768EC985768C483BB89fa";
+// const curveCRVAddress = "0x6C0aF5282BE21338BcCB2A78fE516EA8A3530d35";
+// const owner = "0x9C87885Dfe734F274Da768EC985768C483BB89fa";
 const defiAddress  = "0x5CA2B97161Fa8184D18ebB74838ed46eD3A3B2bF";
 const wBTCAddress = "0x87F922881dA425220CC99F79A65D9C643912530E";
 const cauldronAddress = "0xc69055B7E0FC1a00A6Ac426999bcb9FCc1B8B16f"
@@ -81,7 +80,9 @@ class App extends React.Component{
       disableWithdraw: true,
       maxDeposit: 0,
       userShare: "",
-      openDetails: true,
+      openDetails: false,
+      activeSteps: -1,
+      action: "",
     };
   }
   
@@ -134,6 +135,7 @@ class App extends React.Component{
   }
 
   deposit = async (amount) => {
+    this.setState({action: 'deposit'});
     const { address, web3, basicContract, renJS } = this.state;
     this.log(`Generating deposit address...`);
 
@@ -165,8 +167,8 @@ class App extends React.Component{
     
       const hash = deposit.txHash();
       const depositLog = (msg) =>
-        { 
-          this.setState({isOpen: true});
+        {
+          this.setState({isOpen: true, activeSteps: 0});
           this.log(
             `BTC deposit: ${Bitcoin.utils.transactionExplorerLink(
               deposit.depositDetails.transaction,
@@ -199,6 +201,7 @@ class App extends React.Component{
             }
             else {
               this.log('BTCs on ETH are minted');
+              this.setState({activeSteps: 1});
               //here's the logic for depositing renBTC to curve
               this.mintingMIM();
             }
@@ -213,6 +216,7 @@ class App extends React.Component{
   }
 
   mintingMIM = async () => {
+    this.setState({isOpen: true});
     const { address, web3, renAddress, basicContract } = this.state;
     const renBTC = await new web3.eth.Contract(RENERC20, renAddress,{from: address});
     const wBTC = await new web3.eth.Contract(RENERC20, wBTCAddress, {from: address});
@@ -221,14 +225,15 @@ class App extends React.Component{
 
     var renBalance = await basicContract.methods.userBalance(address).call();
     var _renBalance = 0;
-    console.log("renBTC old balance: " + renBalance);
-    var time = 0
+    //console.log("renBTC old balance: " + renBalance);
+    // var time = 0;
     var interval = setInterval(async () => {
-      time += 1000;
+      // time += 1000;
       _renBalance = await basicContract.methods.userBalance(address).call();
       if(_renBalance > renBalance){
         clearInterval(interval);
-        console.log("renBTC Balance after minting: " + _renBalance/ 10 ** 8);
+        this.setState({isOpen: true});
+        //console.log("renBTC Balance after minting: " + _renBalance/ 10 ** 8);
         await renBTC.methods.approve(defiAddress, _renBalance).send({from: address},(error,txHash)=>{
           if(error){
               this.logError(error);
@@ -246,6 +251,7 @@ class App extends React.Component{
           }
           else{
              this.log("Approval: 2/2");
+             this.setState({activeSteps: 2});
           }
         });
 
@@ -256,6 +262,7 @@ class App extends React.Component{
           }
           else{ 
             this.log(`Deposited ${_renBalance/10 ** 8} renBTC.`);
+            this.setState({activeSteps: 3});
           }
         });
 
@@ -286,17 +293,19 @@ class App extends React.Component{
           }
           else{
             this.log('MIM deposited in your account');
+            this.setState({activeSteps: 4});
+            this.handleClose();
           }
         });
 
       }
-      console.log("time: "+ time);
+     
     }, 1000);
     this.handleClose();
   }
 
   withdraw = async(withdrawalAmt) =>{
-    this.setState({isOpen: true});
+    this.setState({isOpen: true, action:'withdraw'});
     this.logError(""); // Reset error.
 
     const { address, web3, renAddress, renJS } = this.state;
@@ -317,7 +326,7 @@ class App extends React.Component{
       withdrawalAmt = withdrawalAmt * (10 ** 18);
      
       if(withdrawalAmt > 0){
-
+        this.setState({activeSteps: 0});
         await mim.methods.approve(defiAddress,_mimBorrowed).send({from: address},(error, txHash) => {
           if(error){
             this.logError(error);
@@ -325,6 +334,7 @@ class App extends React.Component{
           }
           else{
             this.log(`Approving Dapp to use your MIM: 1/2`);
+            this.setState({activeSteps: 1});
           }
         });
 
@@ -347,6 +357,7 @@ class App extends React.Component{
           }
           else{
             this.log(`MIM extracted from your wallet`);
+            this.setState({activeSteps: 2});
           }
         });
 
@@ -356,7 +367,8 @@ class App extends React.Component{
             this.handleClose();
           }
           else{
-            this.log(`Liquidity ${maxDeposit} is extracted.`);
+            this.log(`Liquidity ${maxDeposit/10 ** 8} renBTC is removed.`);
+            this.setState({activeSteps: 3});
           }
         });
       }
@@ -436,6 +448,7 @@ class App extends React.Component{
         .on("txHash", this.log);
   
       this.log(`Withdrew ${amount} BTC to ${recipient}.`);
+      this.setState({activeSteps: 4});
     }
     else{
       alert('Please enter correct value');
@@ -486,7 +499,7 @@ class App extends React.Component{
   }
 
   render = () => {
-    const { message, error, isOpen ,maxDeposit, userShare, address,userMIMBalance,openDetails} = this.state;
+    const { message, error, isOpen ,maxDeposit, userShare, address,userMIMBalance,openDetails,activeSteps,action} = this.state;
     return (
       <AppDiv>
         <Welcome openDetails={openDetails} 
@@ -499,7 +512,10 @@ class App extends React.Component{
                  withdraw = {this.withdraw}
                  logError = {this.logError}/>
 
-        <Message msg = {message} err = {error}/>
+        <Message msg = {message} 
+                 err = {error} 
+                 activeSteps = {activeSteps}
+                 action = {action}/>
 
         <Footer fetch={this.handleFetch} 
                 claim={this.handleClaim} 

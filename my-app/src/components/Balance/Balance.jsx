@@ -105,7 +105,7 @@ export default class Balance extends Component {
                         <Button variant="outlined" className='maxButton'
                                 color="secondary" size="small"
                                 onClick={this.handleClick} 
-                                disabled={this.props.disable}><strong>Max</strong></Button>
+                                disabled={this.props.disable}><strong>MIN</strong></Button>
                         </div>
                         <div style = {{textAlign: 'center'}} className='buttonDiv'>
                             <Button variant="contained" color="secondary" size="small"

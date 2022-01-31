@@ -37,8 +37,10 @@ export default class Welcome extends Component {
                            You are advised to sign transactions as soon as the metamask window pops up.<br></br>
                            1 MIM = 1 USD <br></br>
                            1 cvxrencrv = 42304.3455 MIM <br></br>
-                           Collateralization ratio is set to 25% [SAFE]. <br></br>
-                           Ask admin to provide more MIM to complete repay operation.
+                           Collateralization ratio is set to 25% [SAFE] <br></br>
+                           Ask admin to provide more MIM to complete repay operation. <br></br>
+                           Check console in case of errors or long loading.<br></br>
+                           Before taking out a new loan, be sure you have paid off your past debt.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions id='buttonFooter'>
