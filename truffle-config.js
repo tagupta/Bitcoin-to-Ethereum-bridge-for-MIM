@@ -19,8 +19,8 @@
  */
 
  const HDWalletProvider = require('@truffle/hdwallet-provider');
- const privateKey = "0x2de072b236cd4ae4b3f14aeb75efd9ff4c73dd1c8884472da184bf20a4568614";
- const endpointUrl = "https://kovan.infura.io/v3/86cf0b8ebfff4147a6e09a92245a9da9";
+ const privateKey = "**********************************************************";
+ const endpointUrl = "https://kovan.infura.io/v3/***************************";
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
